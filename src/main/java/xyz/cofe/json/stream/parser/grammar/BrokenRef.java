@@ -21,7 +21,7 @@ public record BrokenRef(Grammar.Rule rule, Grammar.Ref ref) {
         var res = new ArrayList<BrokenRef>();
 
         grammar.rules().each( rule -> {
-            for( var d : rule.definition().nested() ){
+            for( var d : rule.definition().walk().go() ){
                 if( d instanceof Grammar.Ref ref ){
                     var rules = grammar.rule(ref.name());
                     if( rules.size()<1 ){

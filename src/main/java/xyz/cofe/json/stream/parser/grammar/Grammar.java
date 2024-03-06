@@ -35,7 +35,18 @@ public record Grammar(
      * @param name       имя
      * @param definition определение
      */
-    public record Rule(String name, Definition definition) {}
+    public record Rule(String name, Definition definition) {
+        /**
+         * Возвращает индекс инструкции
+         * @param def искомая инструкция
+         * @return -1 если не найдена в списке, <br>
+         * индекс соответствующий обходу walk()
+         */
+        public int indexOf(Definition def){
+            if( def==null ) throw new IllegalArgumentException("def==null");
+            return definition.walk().go().enumerate().find( e -> e.value()==def ).map( e -> (int)e.index() ).orElse(-1);
+        }
+    }
 
     /**
      * Определение правила - правая часть вывода
@@ -46,7 +57,7 @@ public record Grammar(
          * @param path путь (0 - корень)
          */
         default void visit(Consumer<ImList<Definition>> path){
-            if( path==null ) throw new IllegalArgumentException("path==null");
+            if( path==null ) throw new IllegalArgumentException("revPath==null");
             HTree.visit(this,new Object(){
                 public void enter(ImList<Nest.PathNode> revPath){
                     if( revPath.head().map(h -> h.pathValue() instanceof Definition).orElse(false) ) {
@@ -66,24 +77,60 @@ public record Grammar(
         }
 
         /**
-         * Возвращает вложенные узлы
-         * @return вложенные узлы
+         * Обход вложенных элементов
+         * @return Обход
          */
-        default ImList<Definition> nested(){
-            if(Visit.nestedCache.containsKey(this) ){
-                var cached = Visit.nestedCache.get(this);
-                return cached;
+        default Walk walk(){
+            return new Walk(this);
+        }
+
+        /**
+         * Обход вложенных элементов
+         */
+        public static final class Walk {
+            private final Definition root;
+
+            private Walk(Definition root) {
+                this.root = root;
             }
 
-            var lst = new ArrayList<Definition>();
-            visit(path -> {
-                path.last().ifPresent(lst::add);
-            });
+            /**
+             * Обход вложенных элементов
+             * @return элементы
+             */
+            public ImList<Definition> go(){
+                if(Visit.nestedCache.containsKey(root) ){
+                    return Visit.nestedCache.get(root);
+                }
 
-            var imList = ImList.of(lst);
-            Visit.nestedCache.put(this,imList);
+                var lst = new ArrayList<Definition>();
+                root.visit(path -> {
+                    path.last().ifPresent(lst::add);
+                });
 
-            return imList;
+                var imList = ImList.of(lst);
+                Visit.nestedCache.put(root,imList);
+
+                return imList;
+            }
+
+            /**
+             * Обход вложенных элементов, с информацией о пути доступа
+             * @return пути доступа
+             */
+            public ImList<ImList<Definition>> tree(){
+                if(Visit.nestedPathCache.containsKey(root) ){
+                    return Visit.nestedPathCache.get(root);
+                }
+
+                var lst = new ArrayList<ImList<Definition>>();
+                root.visit(lst::add);
+
+                var imList = ImList.of(lst);
+                Visit.nestedPathCache.put(root,imList);
+
+                return imList;
+            }
         }
     }
 

@@ -7,4 +7,5 @@ import java.util.WeakHashMap;
 
 public class Visit {
     public static final WeakHashMap<Grammar.Definition, ImList<Grammar.Definition>> nestedCache = new WeakHashMap<>();
+    public static final WeakHashMap<Grammar.Definition, ImList<ImList<Grammar.Definition>>> nestedPathCache = new WeakHashMap<>();
 }
