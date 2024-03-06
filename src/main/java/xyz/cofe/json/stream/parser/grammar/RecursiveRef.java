@@ -4,7 +4,9 @@ import xyz.cofe.coll.im.ImList;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
+import java.util.WeakHashMap;
 
 /**
  * Рекурсивная ссылка
@@ -38,6 +40,8 @@ public record RecursiveRef(ImList<PathNode> revPath) {
      */
     public record PathNode(Grammar.Rule rule, Grammar.Ref ref) {}
 
+    private static final Map<Grammar,ImList<RecursiveRef>> cache = new WeakHashMap<>();
+
     /**
      * Поиск рекурсивных ссылок в грамматике
      *
@@ -47,6 +51,10 @@ public record RecursiveRef(ImList<PathNode> revPath) {
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     public static ImList<RecursiveRef> find(Grammar grammar) {
         if (grammar == null) throw new IllegalArgumentException("grammar==null");
+
+        var cached = cache.get(grammar);
+        if( cached!=null )return cached;
+
         var cycles = new ArrayList<RecursiveRef>();
 
         grammar.rules().each(start -> {
@@ -83,7 +91,10 @@ public record RecursiveRef(ImList<PathNode> revPath) {
         var removeSet = getInvalidPaths(cycles);
         cycles.removeAll(removeSet);
 
-        return ImList.of(cycles);
+        var result = ImList.of(cycles);
+        cache.put(grammar, result);
+
+        return result;
     }
 
     private static HashSet<RecursiveRef> getInvalidPaths(ArrayList<RecursiveRef> cycles) {
