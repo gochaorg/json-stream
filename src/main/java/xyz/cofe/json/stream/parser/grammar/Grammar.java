@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
@@ -36,6 +38,11 @@ public record Grammar(
      * @param definition определение
      */
     public record Rule(String name, Definition definition) {
+        public Rule {
+            Objects.requireNonNull(name);
+            Objects.requireNonNull(definition);
+        }
+
         /**
          * Возвращает индекс инструкции
          * @param def искомая инструкция
@@ -53,10 +60,43 @@ public record Grammar(
      */
     public sealed interface Definition {
         /**
+         * Путь в правиле до инструкции
+         * @param directPath путь до инструкции
+         */
+        record DefPath( ImList<Definition> directPath ) {
+            public DefPath {
+                Objects.requireNonNull(directPath);
+            }
+
+            /**
+             * Определение на которую ссылается путь
+             * @return целевая инструкция
+             */
+            public Definition definition(){
+                var d = directPath.last();
+                if( d.isEmpty() )throw new IllegalStateException("empty path");
+                return d.get();
+            }
+
+            /**
+             * Поиск инструкции в правиле
+             * @param rule правило
+             * @param def инструкция
+             * @return Расположение
+             */
+            public static ImList<DefPath> find(Grammar.Rule rule, Definition def){
+                Objects.requireNonNull(rule);
+                Objects.requireNonNull(def);
+
+                return rule.definition().walk().tree().filter( d -> d.definition()==def );
+            }
+        }
+
+        /**
          * Обход вложенных узлов
          * @param path путь (0 - корень)
          */
-        default void visit(Consumer<ImList<Definition>> path){
+        default void visit(Consumer<DefPath> path){
             if( path==null ) throw new IllegalArgumentException("revPath==null");
             HTree.visit(this,new Object(){
                 public void enter(ImList<Nest.PathNode> revPath){
@@ -70,7 +110,7 @@ public record Grammar(
                                 }
                             }
                         );
-                        path.accept(targetPath);
+                        path.accept(new DefPath(targetPath));
                     }
                 }
             });
@@ -105,7 +145,7 @@ public record Grammar(
 
                 var lst = new ArrayList<Definition>();
                 root.visit(path -> {
-                    path.last().ifPresent(lst::add);
+                    lst.add(path.definition());
                 });
 
                 var imList = ImList.of(lst);
@@ -118,12 +158,12 @@ public record Grammar(
              * Обход вложенных элементов, с информацией о пути доступа
              * @return пути доступа
              */
-            public ImList<ImList<Definition>> tree(){
+            public ImList<DefPath> tree(){
                 if(Visit.nestedPathCache.containsKey(root) ){
                     return Visit.nestedPathCache.get(root);
                 }
 
-                var lst = new ArrayList<ImList<Definition>>();
+                var lst = new ArrayList<DefPath>();
                 root.visit(lst::add);
 
                 var imList = ImList.of(lst);
@@ -138,31 +178,51 @@ public record Grammar(
      * Последовательность частей
      * @param seq последовательность
      */
-    public record Sequence(ImList<Definition> seq) implements Definition {}
+    public record Sequence(ImList<Definition> seq) implements Definition {
+        public Sequence {
+            Objects.requireNonNull(seq);
+        }
+    }
 
     /**
      * Альтернативные части
      * @param alt части
      */
-    public record Alternative(ImList<Definition> alt) implements Definition {}
+    public record Alternative(ImList<Definition> alt) implements Definition {
+        public Alternative {
+            Objects.requireNonNull(alt);
+        }
+    }
 
     /**
      * Повтор части 0 или более раз
      * @param def часть
      */
-    public record Repeat(Definition def) implements Definition {}
+    public record Repeat(Definition def) implements Definition {
+        public Repeat {
+            Objects.requireNonNull(def);
+        }
+    }
 
     /**
      * Терминальная конструкция
      * @param text текст конструкции
      */
-    public record Term(String text) implements Definition {}
+    public record Term(String text) implements Definition {
+        public Term {
+            Objects.requireNonNull(text);
+        }
+    }
 
     /**
      * НеТерминал
      * @param name ссылка на правило
      */
-    public record Ref(String name) implements Definition {}
+    public record Ref(String name) implements Definition {
+        public Ref {
+            Objects.requireNonNull(name);
+        }
+    }
 
     /**
      * Создание грамматики

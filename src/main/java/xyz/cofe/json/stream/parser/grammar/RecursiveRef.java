@@ -33,6 +33,26 @@ public record RecursiveRef(ImList<PathNode> revPath) {
     }
 
     /**
+     * Узел содержащий последнюю ссылку
+     *
+     * @return узел пути
+     */
+    public Optional<PathNode> lastRefNode() {
+        return revPath().head();
+    }
+
+    @Override
+    public String toString() {
+        return "recursive ref: rule="
+            + startRule().map(Grammar.Rule::name).orElse("?")
+            + " path=" + revPath().map(
+                n -> n.rule().name() + "/" + n.ref().name() + "[" + n.rule().indexOf(n.ref()) + "]"
+            ).reverse()
+            .foldLeft("", (acc, it) -> acc.isBlank() ? it : acc + " > " + it)
+            ;
+    }
+
+    /**
      * Узел пути
      *
      * @param rule Правило в котором есть ссылка
@@ -40,7 +60,7 @@ public record RecursiveRef(ImList<PathNode> revPath) {
      */
     public record PathNode(Grammar.Rule rule, Grammar.Ref ref) {}
 
-    private static final Map<Grammar,ImList<RecursiveRef>> cache = new WeakHashMap<>();
+    private static final Map<Grammar, ImList<RecursiveRef>> cache = new WeakHashMap<>();
 
     /**
      * Поиск рекурсивных ссылок в грамматике
@@ -53,7 +73,7 @@ public record RecursiveRef(ImList<PathNode> revPath) {
         if (grammar == null) throw new IllegalArgumentException("grammar==null");
 
         var cached = cache.get(grammar);
-        if( cached!=null )return cached;
+        if (cached != null) return cached;
 
         var cycles = new ArrayList<RecursiveRef>();
 
@@ -104,14 +124,14 @@ public record RecursiveRef(ImList<PathNode> revPath) {
                 removeSet.add(oneCycle);
                 continue;
             }
-            if(oneCycle.lastRef().isEmpty()){
+            if (oneCycle.lastRef().isEmpty()) {
                 removeSet.add(oneCycle);
                 continue;
             }
 
             var start = oneCycle.startRule().get();
             var lastRef = oneCycle.lastRef().get();
-            if( !start.name().equals(lastRef.name()) ){
+            if (!start.name().equals(lastRef.name())) {
                 removeSet.add(oneCycle);
             }
         }
