@@ -68,6 +68,16 @@ public record Grammar(
                 Objects.requireNonNull(directPath);
             }
 
+            public static DefPath of(Grammar.Rule rule){
+                if( rule==null ) throw new IllegalArgumentException("rule==null");
+                return new DefPath(ImList.of(rule.definition));
+            }
+
+            public DefPath append(Definition def){
+                if( def==null ) throw new IllegalArgumentException("def==null");
+                return new DefPath(directPath.append(def));
+            }
+
             /**
              * Определение на которую ссылается путь
              * @return целевая инструкция

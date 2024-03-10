@@ -4,6 +4,7 @@ import xyz.cofe.coll.im.ImList;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.WeakHashMap;
@@ -56,20 +57,50 @@ public record RecursiveRef(ImList<PathNode> revPath) {
     /**
      * Узел пути
      *
-     * @param rule Правило в котором есть ссылка
+     * @param rule    Правило в котором есть ссылка
      * @param defPath часть правила
      */
-    public record PathNode(Grammar.Rule rule, Grammar.Definition.DefPath defPath) {
+    public record PathNode(Grammar.Rule rule, Grammar.Definition.DefPath defPath, int offset) {
         @Override
         public String toString() {
-            var defTxt = switch (defPath.definition()){
-                case Grammar.Ref(var r) -> "ref("+r+")";
-                case Grammar.Term(var t) -> "term("+t+")";
-                case Grammar.Alternative ignored -> "alt(...)";
-                case Grammar.Repeat ignored -> "repeat()";
-                case Grammar.Sequence ignored -> "sequence()";
+            var defTxt = switch (defPath.definition()) {
+                case Grammar.Ref(var r) -> "ref(" + r + " o=" + offset + ")";
+                case Grammar.Term(var t) -> "term(" + t + " o=" + offset + ")";
+                case Grammar.Alternative ignored -> "alt(o=" + offset + ")";
+                case Grammar.Repeat ignored -> "repeat(o=" + offset + ")";
+                case Grammar.Sequence ignored -> "sequence(o=" + offset + ")";
             };
-            return rule.name()+"/"+defTxt;
+            return rule.name() + "/" + defTxt;
+        }
+
+        public static PathNode of(Grammar.Rule rule) {
+            if (rule == null) throw new IllegalArgumentException("rule==null");
+            return new PathNode(rule, Grammar.Definition.DefPath.of(rule), 0);
+        }
+
+        public static PathNode of(Grammar.Rule rule, int offset) {
+            if (rule == null) throw new IllegalArgumentException("rule==null");
+            return new PathNode(rule, Grammar.Definition.DefPath.of(rule), offset);
+        }
+    }
+
+    /**
+     * Рекурсивный путь
+     * @param revPath путь
+     */
+    public record RecursivePath(
+        ImList<PathNode> revPath
+    ) {
+        public static RecursivePath init(Grammar.Rule rule){
+            if( rule==null ) throw new IllegalArgumentException("rule==null");
+            return new RecursivePath(
+                ImList.of(PathNode.of(rule))
+            );
+        }
+
+        public RecursivePath add(PathNode node){
+            if( node==null ) throw new IllegalArgumentException("node==null");
+            return new RecursivePath( revPath.prepend(node) );
         }
     }
 
@@ -91,49 +122,72 @@ public record RecursiveRef(ImList<PathNode> revPath) {
         var cycles = new ArrayList<RecursiveRef>();
 
         grammar.rules().each(start -> {
-            System.out.println("start "+start.name());
+            System.out.println("start " + start.name());
 
             var visitedRuleName = new HashSet<String>();
             visitedRuleName.add(start.name());
 
-            var workSet = start.definition().walk().tree()
-                .map(d -> ImList.of(new PathNode(start, d)));
+            ImList<RecursivePath> workSet = ImList.of(RecursivePath.init(start));
 
             while (workSet.size() > 0) {
                 var headPath = workSet.head().get();
 
                 // TODO debug
-                System.out.println("head path "+
-                    headPath.reverse()
-                        .map(PathNode::toString)
-                        .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
-                );
+                dubugShowHead(headPath);
 
                 workSet = workSet.tail();
 
-                var headNode = headPath.head().get();
+                var headNode = headPath.revPath().head().get();
 
-                if(headNode.defPath.definition() instanceof Grammar.Ref ref) {
+                if (headNode.defPath.definition() instanceof Grammar.Ref ref) {
                     if (visitedRuleName.contains(ref.name())) {
                         // cycle detect
-                        cycles.add(new RecursiveRef(headPath));
+                        cycles.add(new RecursiveRef(headPath.revPath()));
                     } else {
-                        var follow = grammar.rule(ref.name()).fmap(rule -> rule.definition().walk().tree()
-                            .map(d -> ImList.of(headPath.prepend(new PathNode(rule, d)))));
+                        var follow =
+                            grammar.rule(ref.name()).map(rule ->
+                                headPath.add(PathNode.of(rule, headNode.offset))
+                            );
 
-                        // TODO debug
-                        System.out.println("follow ("+follow.size()+") from "+headNode);
-
-                        // TODO debug
-                        follow.each(path -> System.out.println(path.reverse()
-                            .map(PathNode::toString)
-                            .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
-                        ));
+                        debugShowFollow(follow, headNode);
 
                         workSet = workSet.prepend(follow);
 
                         visitedRuleName.add(ref.name());
                     }
+                } else if (headNode.defPath.definition() instanceof Grammar.Alternative alt) {
+                    var follow = alt.alt().map(d -> headPath.add(
+                        new PathNode(headNode.rule, headNode.defPath.append(d), headNode.offset)
+                    ));
+
+                    debugShowFollow(follow, headNode);
+
+                    workSet = workSet.prepend(follow);
+                } else if (headNode.defPath.definition() instanceof Grammar.Sequence seq) {
+                    var follow = seq.seq().enumerate().map(
+                        d -> headPath.add(
+                            new PathNode(headNode.rule, headNode.defPath.append(d.value()), headNode.offset)
+                        )
+                    );
+
+                    debugShowFollow(follow, headNode);
+
+                    workSet = workSet.prepend(follow);
+                } else if (headNode.defPath.definition() instanceof Grammar.Repeat rep) {
+                    var follow1 =
+                        headPath.add(
+                            new PathNode(
+                                headNode.rule,
+                                headNode.defPath.append(rep.def()),
+                                headNode.offset
+                            )
+                        );
+
+                    var follow = ImList.of(List.of(follow1));
+
+                    debugShowFollow(follow, headNode);
+
+                    workSet = workSet.prepend(follow);
                 }
             }
         });
@@ -145,6 +199,25 @@ public record RecursiveRef(ImList<PathNode> revPath) {
         cache.put(grammar, result);
 
         return result;
+    }
+
+    private static void dubugShowHead(RecursivePath r_path) {
+        System.out.println("head path " +
+            r_path.revPath().reverse()
+                .map(PathNode::toString)
+                .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
+        );
+    }
+
+    private static void debugShowFollow(ImList<RecursivePath> follow, PathNode headNode) {
+        // TODO debug
+        System.out.println("follow (" + follow.size() + ") from " + headNode);
+
+        // TODO debug
+        follow.each(path -> System.out.println(path.revPath.reverse()
+            .map(PathNode::toString)
+            .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
+        ));
     }
 
     private static HashSet<RecursiveRef> getInvalidPaths(ArrayList<RecursiveRef> cycles) {
