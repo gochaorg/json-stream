@@ -37,6 +37,7 @@ public record RecursiveRef(ImList<PathNode> revPath) {
      *
      * @return узел пути
      */
+    @SuppressWarnings("unused")
     public Optional<PathNode> lastRefNode() {
         return revPath().head();
     }
@@ -64,9 +65,9 @@ public record RecursiveRef(ImList<PathNode> revPath) {
             var defTxt = switch (defPath.definition()){
                 case Grammar.Ref(var r) -> "ref("+r+")";
                 case Grammar.Term(var t) -> "term("+t+")";
-                case Grammar.Alternative a -> "alt(...)";
-                case Grammar.Repeat r -> "repeat()";
-                case Grammar.Sequence s -> "sequence()";
+                case Grammar.Alternative ignored -> "alt(...)";
+                case Grammar.Repeat ignored -> "repeat()";
+                case Grammar.Sequence ignored -> "sequence()";
             };
             return rule.name()+"/"+defTxt;
         }
@@ -101,6 +102,13 @@ public record RecursiveRef(ImList<PathNode> revPath) {
             while (workSet.size() > 0) {
                 var headPath = workSet.head().get();
 
+                // TODO debug
+                System.out.println("head path "+
+                    headPath.reverse()
+                        .map(PathNode::toString)
+                        .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
+                );
+
                 workSet = workSet.tail();
 
                 var headNode = headPath.head().get();
@@ -110,18 +118,17 @@ public record RecursiveRef(ImList<PathNode> revPath) {
                         // cycle detect
                         cycles.add(new RecursiveRef(headPath));
                     } else {
-                        var follow = grammar.rule(ref.name()).fmap(rule -> {
-                            return rule.definition().walk().tree()
-                                .map(d -> ImList.of(headPath.prepend(new PathNode(rule, d))));
-                        });
+                        var follow = grammar.rule(ref.name()).fmap(rule -> rule.definition().walk().tree()
+                            .map(d -> ImList.of(headPath.prepend(new PathNode(rule, d)))));
 
+                        // TODO debug
                         System.out.println("follow ("+follow.size()+") from "+headNode);
-                        follow.each(path -> {
-                            System.out.println(path.reverse()
-                                .map(n -> n.toString())
-                                .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
-                            );
-                        });
+
+                        // TODO debug
+                        follow.each(path -> System.out.println(path.reverse()
+                            .map(PathNode::toString)
+                            .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
+                        ));
 
                         workSet = workSet.prepend(follow);
 
