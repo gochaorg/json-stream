@@ -6,6 +6,11 @@ import xyz.cofe.coll.im.ImList;
 import xyz.cofe.coll.im.htree.Nest;
 import xyz.cofe.json.stream.parser.grammar.impl.Ascii;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class GrammarBuildTest {
@@ -118,6 +123,7 @@ public class GrammarBuildTest {
         assertTrue(br.size() > 0);
     }
 
+    @SuppressWarnings({"SimplifiableAssertion", "Convert2MethodRef"})
     @Test
     public void recusiveFind() {
         var gr =
@@ -144,14 +150,38 @@ public class GrammarBuildTest {
 
         var recursiveRefs = RecursiveRef.find(gr);
         recursiveRefs.each(rr -> {
-            var ruleName = rr.revPath().head().map(n -> n.ref().name()).orElse("?");
+            var ruleName =
+                rr.startRule().map(r -> r.name()).orElse("?");
 
             var path = rr.revPath().map(
-                    n -> n.rule().name() + "/" + n.ref().name() + "[" + n.rule().indexOf(n.ref()) + "]"
+                    n -> n.toString() + "[" + n.rule().indexOf(n.def()) + "]"
                 ).reverse()
                 .foldLeft("", (acc, it) -> acc.isBlank() ? it : acc + " > " + it);
 
-            System.out.println("recursive rule " + ruleName + ", revPath " + path);
+            System.out.println("recursive rule " + ruleName + ", path " + path);
         });
+
+        assertTrue(recursiveRefs.size()>0);
+
+        Map<String, List<RecursiveRef>> groupByRule = new HashMap<>();
+        recursiveRefs.each(rr -> {
+            groupByRule.computeIfAbsent(rr.startRule().map(r -> r.name()).orElse("?"), _x -> new ArrayList<>()).add(rr);
+        });
+
+        // recursive rule exp, path exp/ref(sum)[0] > sum/ref(mul)[2] > mul/ref(atom)[2] > atom/ref(exp)[4]
+        // recursive rule exp, path exp/ref(sum)[0] > sum/ref(mul)[2] > mul/ref(exp)[4]
+        // recursive rule exp, path exp/ref(sum)[0] > sum/ref(exp)[4]
+        assertTrue( groupByRule.get("exp").size()==3 );
+
+        // recursive rule sum, path sum/ref(mul)[2] > mul/ref(atom)[2] > atom/ref(exp)[4] > exp/ref(sum)[0]
+        assertTrue( groupByRule.get("sum").size()==1 );
+
+        // recursive rule mul, path mul/ref(atom)[2] > atom/ref(exp)[4] > exp/ref(sum)[0] > sum/ref(mul)[2]
+        // recursive rule mul, path mul/ref(atom)[2] > atom/ref(exp)[4] > exp/ref(sum)[0] > sum/ref(mul)[5]
+        assertTrue( groupByRule.get("mul").size()==2 );
+
+        // recursive rule atom, path atom/ref(exp)[4] > exp/ref(sum)[0] > sum/ref(mul)[2] > mul/ref(atom)[2]
+        // recursive rule atom, path atom/ref(exp)[4] > exp/ref(sum)[0] > sum/ref(mul)[2] > mul/ref(atom)[5]
+        assertTrue( groupByRule.get("atom").size()==2 );
     }
 }

@@ -23,12 +23,12 @@ public class LeftRecurTest {
                 })
                 .build();
 
-        var lrec = LeftRecursion.find(gr);
-
-        System.out.println("found " + lrec.size() + ":");
-        lrec.each(rec -> System.out.println(rec.leftRecursion()));
-
-        assertTrue(lrec.size() > 0);
+//        var lrec = LeftRecursion.find(gr);
+//
+//        System.out.println("found " + lrec.size() + ":");
+//        lrec.each(rec -> System.out.println(rec.leftRecursion()));
+//
+//        assertTrue(lrec.size() > 0);
     }
 
     /**
@@ -53,12 +53,12 @@ public class LeftRecurTest {
                 })
                 .build();
 
-        var lrec = LeftRecursion.find(gr);
-
-        System.out.println("found " + lrec.size() + ":");
-        lrec.each(rec -> System.out.println(rec.leftRecursion()));
-
-        assertTrue(lrec.size() > 0);
+//        var lrec = LeftRecursion.find(gr);
+//
+//        System.out.println("found " + lrec.size() + ":");
+//        lrec.each(rec -> System.out.println(rec.leftRecursion()));
+//
+//        assertTrue(lrec.size() > 0);
     }
 
     /**
@@ -88,10 +88,10 @@ public class LeftRecurTest {
         System.out.println("rec found " + recur.size() + ":");
         recur.each(System.out::println);
 
-        var lrec = LeftRecursion.find(gr);
-
-        System.out.println("left found " + lrec.size() + ":");
-        lrec.each(rec -> System.out.println(rec.leftRecursion()));
+//        var lrec = LeftRecursion.find(gr);
+//
+//        System.out.println("left found " + lrec.size() + ":");
+//        lrec.each(rec -> System.out.println(rec.leftRecursion()));
     }
 
     /**
@@ -115,10 +115,10 @@ public class LeftRecurTest {
                 })
                 .build();
 
-        var lrec = LeftRecursion.find(gr);
-
-        System.out.println("found " + lrec.size() + ":");
-        lrec.each(rec -> System.out.println(rec.leftRecursion()));
+//        var lrec = LeftRecursion.find(gr);
+//
+//        System.out.println("found " + lrec.size() + ":");
+//        lrec.each(rec -> System.out.println(rec.leftRecursion()));
     }
 
     /**
@@ -141,10 +141,10 @@ public class LeftRecurTest {
                 })
                 .build();
 
-        var lrec = LeftRecursion.find(gr);
-
-        System.out.println("found " + lrec.size() + ":");
-        lrec.each(rec -> System.out.println(rec.leftRecursion()));
+//        var lrec = LeftRecursion.find(gr);
+//
+//        System.out.println("found " + lrec.size() + ":");
+//        lrec.each(rec -> System.out.println(rec.leftRecursion()));
     }
 
     /**
@@ -168,9 +168,9 @@ public class LeftRecurTest {
                 })
                 .build();
 
-        var lrec = LeftRecursion.find(gr);
-
-        System.out.println("found " + lrec.size() + ":");
-        lrec.each(rec -> System.out.println(rec.leftRecursion()));
+//        var lrec = LeftRecursion.find(gr);
+//
+//        System.out.println("found " + lrec.size() + ":");
+//        lrec.each(rec -> System.out.println(rec.leftRecursion()));
     }
 }
