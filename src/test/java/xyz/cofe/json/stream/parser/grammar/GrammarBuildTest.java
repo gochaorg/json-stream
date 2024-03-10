@@ -149,17 +149,7 @@ public class GrammarBuildTest {
                 .build();
 
         var recursiveRefs = RecursiveRef.find(gr);
-        recursiveRefs.each(rr -> {
-            var ruleName =
-                rr.startRule().map(r -> r.name()).orElse("?");
-
-            var path = rr.revPath().map(
-                    n -> n.toString() + "[" + n.rule().indexOf(n.def()) + "]"
-                ).reverse()
-                .foldLeft("", (acc, it) -> acc.isBlank() ? it : acc + " > " + it);
-
-            System.out.println("recursive rule " + ruleName + ", path " + path);
-        });
+        recursiveRefs.each(rr -> System.out.println(rr));
 
         assertTrue(recursiveRefs.size()>0);
 

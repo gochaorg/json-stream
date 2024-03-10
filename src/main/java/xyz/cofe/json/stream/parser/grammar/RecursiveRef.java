@@ -29,7 +29,7 @@ public record RecursiveRef(ImList<PathNode> revPath) {
      * @return ссылка
      */
     public Optional<Grammar.Ref> lastRef() {
-        return revPath.fmap(n -> n.def instanceof Grammar.Ref r ? ImList.of(r) : ImList.of()).head();
+        return revPath.fmap(n -> n.defPath().definition() instanceof Grammar.Ref r ? ImList.of(r) : ImList.of()).head();
     }
 
     /**
@@ -46,7 +46,7 @@ public record RecursiveRef(ImList<PathNode> revPath) {
         return "recursive ref: rule="
             + startRule().map(Grammar.Rule::name).orElse("?")
             + " path=" + revPath().map(
-                n -> n.toString() + "[" + n.rule().indexOf(n.def()) + "]"
+                n -> n.toString() + "[" + n.rule().indexOf(n.defPath().definition()) + "]"
             ).reverse()
             .foldLeft("", (acc, it) -> acc.isBlank() ? it : acc + " > " + it)
             ;
@@ -56,12 +56,12 @@ public record RecursiveRef(ImList<PathNode> revPath) {
      * Узел пути
      *
      * @param rule Правило в котором есть ссылка
-     * @param def  ссылка на другое правило
+     * @param defPath часть правила
      */
-    public record PathNode(Grammar.Rule rule, Grammar.Definition def) {
+    public record PathNode(Grammar.Rule rule, Grammar.Definition.DefPath defPath) {
         @Override
         public String toString() {
-            var defTxt = switch (def){
+            var defTxt = switch (defPath.definition()){
                 case Grammar.Ref(var r) -> "ref("+r+")";
                 case Grammar.Term(var t) -> "term("+t+")";
                 case Grammar.Alternative a -> "alt(...)";
@@ -93,7 +93,7 @@ public record RecursiveRef(ImList<PathNode> revPath) {
             var visitedRuleName = new HashSet<String>();
             visitedRuleName.add(start.name());
 
-            var workSet = start.definition().walk().go()
+            var workSet = start.definition().walk().tree()
                 //.fmap(Grammar.Ref.class)
                 .map(d -> ImList.of(new PathNode(start, d)));
 
@@ -104,13 +104,13 @@ public record RecursiveRef(ImList<PathNode> revPath) {
 
                 var headRef = headPath.head().get();
 
-                if(headRef.def instanceof Grammar.Ref ref) {
+                if(headRef.defPath.definition() instanceof Grammar.Ref ref) {
                     if (visitedRuleName.contains(ref.name())) {
                         // cycle detect
                         cycles.add(new RecursiveRef(headPath));
                     } else {
                         var follow = grammar.rule(ref.name()).fmap(rule -> {
-                            return rule.definition().walk().go()
+                            return rule.definition().walk().tree()
                                 //.fmap(Grammar.Ref.class)
                                 .map(d -> ImList.of(headPath.prepend(new PathNode(rule, d))));
                         });
