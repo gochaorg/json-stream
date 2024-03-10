@@ -4,12 +4,13 @@ import org.junit.jupiter.api.Test;
 import xyz.cofe.coll.im.HTree;
 import xyz.cofe.coll.im.ImList;
 import xyz.cofe.coll.im.htree.Nest;
+import xyz.cofe.json.stream.parser.grammar.impl.Ascii;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class GrammarBuildTest {
     @Test
-    public void test1() {
+    public void describe() {
         var gr =
             Grammar.grammar()
                 .rule("exp", exp -> {
@@ -32,17 +33,28 @@ public class GrammarBuildTest {
                 })
                 .build();
 
-        HTree.visit(gr, new Object() {
-            void enter(ImList<Nest.PathNode> path) {
-                System.out.println("  ".repeat(path.size()) + " " + path.head().get().pathValue());
-            }
-        });
+        assertTrue(gr.rules().size() == 4);
 
-
-        System.out.println("---------");
-        gr.rules().get(0).ifPresent(r -> {
-            System.out.println("rule " + r.name());
-            r.definition().walk().go().each(System.out::println);
+        gr.rules().each(rule -> {
+            System.out.println("rule " +
+                Ascii.bold + rule.name() + Ascii.reset
+            );
+            rule.definition().walk().tree().each(defpath -> {
+                String ident = ">>> ".repeat(defpath.directPath().size());
+                String nodeText = switch (defpath.definition()) {
+                    case Grammar.Term(var txt) -> "Term " + txt;
+                    case Grammar.Ref(var ref) -> "Ref " + Ascii.italicOn + ref + Ascii.reset;
+                    case Grammar.Repeat r -> "Repeat";
+                    case Grammar.Alternative a -> "Alternative";
+                    case Grammar.Sequence s -> "Sequence";
+                };
+                System.out.println(
+                    Ascii.Color.White.foreground() +
+                        ident +
+                        Ascii.Color.Default.foreground() +
+                        nodeText
+                );
+            });
         });
     }
 

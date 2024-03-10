@@ -124,8 +124,8 @@ public record LeftRecursion(RecursiveRef leftRecursion) {
 
     private static int minWeightOf(Grammar.Definition def) {
         return switch (def){
-            case Grammar.Term t -> 1;
             case Grammar.Ref r -> 1;
+            case Grammar.Term t -> 1;
             case Grammar.Repeat r -> 0;
             case Grammar.Alternative a ->
                 a.alt().size()==0
