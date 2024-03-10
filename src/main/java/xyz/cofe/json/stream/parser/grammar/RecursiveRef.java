@@ -45,12 +45,21 @@ public record RecursiveRef(ImList<PathNode> revPath) {
         return revPath().head();
     }
 
+    /**
+     * Рекурсия является "левой"
+     * @return true - левая рекурсия
+     */
+    public boolean isLeftRecursion(){
+        return lastRefNode().map(n -> n.offset==0).orElse(false);
+    }
+
     @Override
     public String toString() {
         return "recursive ref: rule="
             + startRule().map(Grammar.Rule::name).orElse("?")
             + " path=" + revPath().map(
-                n -> n.toString() + "[" + n.rule().indexOf(n.defPath().definition()) + "]"
+                n -> n.toString()
+                    //+ "[" + n.rule().indexOf(n.defPath().definition()) + "]"
             ).reverse()
             .foldLeft("", (acc, it) -> acc.isBlank() ? it : acc + " > " + it)
             ;
@@ -125,7 +134,7 @@ public record RecursiveRef(ImList<PathNode> revPath) {
         var cycles = new ArrayList<RecursiveRef>();
 
         grammar.rules().each(start -> {
-            System.out.println("start " + Ascii.Color.Red.foreground() + Ascii.bold + start.name() + Ascii.reset);
+            debugStartRule(start);
 
             var visitedRuleName = new HashSet<String>();
             visitedRuleName.add(start.name());
@@ -135,8 +144,7 @@ public record RecursiveRef(ImList<PathNode> revPath) {
             while (workSet.size() > 0) {
                 var headPath = workSet.head().get();
 
-                // TODO debug
-                dubugShowHead(headPath);
+                debugShowHead(headPath);
 
                 workSet = workSet.tail();
 
@@ -147,15 +155,7 @@ public record RecursiveRef(ImList<PathNode> revPath) {
                         // cycle detect
                         cycles.add(new RecursiveRef(headPath.revPath()));
 
-                        //TODO
-                        System.out.println( Ascii.bold + "recursive " + Ascii.reset +
-
-                            Ascii.Color.Magenta.foreground() + Ascii.bold +
-                            headPath.revPath().reverse().map(PathNode::toString)
-                            .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
-
-                            + Ascii.reset
-                        );
+                        debugAddCycle(headPath);
                     } else {
                         var follow =
                             grammar.rule(ref.name()).map(rule ->
@@ -239,19 +239,38 @@ public record RecursiveRef(ImList<PathNode> revPath) {
         return result;
     }
 
-    private static void dubugShowHead(RecursivePath r_path) {
+    private static boolean debugEnable(){ return false; }
+    private static void debugAddCycle(RecursivePath headPath) {
+        if( !debugEnable() )return;
+
+        System.out.println( Ascii.bold + "recursive " + Ascii.reset +
+
+            Ascii.Color.Magenta.foreground() + Ascii.bold +
+            headPath.revPath().reverse().map(PathNode::toString)
+            .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
+
+            + Ascii.reset
+        );
+    }
+    private static void debugStartRule(Grammar.Rule start) {
+        if( !debugEnable() )return;
+
+        System.out.println("start " + Ascii.Color.Red.foreground() + Ascii.bold + start.name() + Ascii.reset);
+    }
+    private static void debugShowHead(RecursivePath r_path) {
+        if( !debugEnable() )return;
+
         System.out.println(Ascii.Color.White.foreground() + "head path " + Ascii.reset +
             r_path.revPath().reverse()
                 .map(PathNode::toString)
                 .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
         );
     }
-
     private static void debugShowFollow(ImList<RecursivePath> follow, PathNode headNode) {
-        // TODO debug
+        if( !debugEnable() )return;
+
         System.out.println(Ascii.Color.White.foreground() + "follow (" + follow.size() + ") from " + Ascii.reset + headNode);
 
-        // TODO debug
         follow.each(path -> System.out.println("  " + path.revPath.reverse()
             .map(PathNode::toString)
             .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
