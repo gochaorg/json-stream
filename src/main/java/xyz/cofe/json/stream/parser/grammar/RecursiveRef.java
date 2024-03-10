@@ -90,11 +90,12 @@ public record RecursiveRef(ImList<PathNode> revPath) {
         var cycles = new ArrayList<RecursiveRef>();
 
         grammar.rules().each(start -> {
+            System.out.println("start "+start.name());
+
             var visitedRuleName = new HashSet<String>();
             visitedRuleName.add(start.name());
 
             var workSet = start.definition().walk().tree()
-                //.fmap(Grammar.Ref.class)
                 .map(d -> ImList.of(new PathNode(start, d)));
 
             while (workSet.size() > 0) {
@@ -102,17 +103,24 @@ public record RecursiveRef(ImList<PathNode> revPath) {
 
                 workSet = workSet.tail();
 
-                var headRef = headPath.head().get();
+                var headNode = headPath.head().get();
 
-                if(headRef.defPath.definition() instanceof Grammar.Ref ref) {
+                if(headNode.defPath.definition() instanceof Grammar.Ref ref) {
                     if (visitedRuleName.contains(ref.name())) {
                         // cycle detect
                         cycles.add(new RecursiveRef(headPath));
                     } else {
                         var follow = grammar.rule(ref.name()).fmap(rule -> {
                             return rule.definition().walk().tree()
-                                //.fmap(Grammar.Ref.class)
                                 .map(d -> ImList.of(headPath.prepend(new PathNode(rule, d))));
+                        });
+
+                        System.out.println("follow ("+follow.size()+") from "+headNode);
+                        follow.each(path -> {
+                            System.out.println(path.reverse()
+                                .map(n -> n.toString())
+                                .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
+                            );
                         });
 
                         workSet = workSet.prepend(follow);
