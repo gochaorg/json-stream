@@ -14,29 +14,31 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class GrammarBuildTest {
+    public static Grammar validMath =
+        Grammar.grammar()
+            .rule("exp", exp -> {
+                exp.ref("sum");
+            })
+            .rule("sum", sum -> {
+                sum.ref("mul").term("+").ref("exp")
+                    .alt()
+                    .ref("mul");
+            })
+            .rule("mul", mul -> {
+                mul.ref("atom").term("*").ref("exp")
+                    .alt()
+                    .ref("atom");
+            })
+            .rule("atom", atom -> {
+                atom.term("1")
+                    .alt()
+                    .term("(").ref("exp").term(")");
+            })
+            .build();
+
     @Test
     public void describe() {
-        var gr =
-            Grammar.grammar()
-                .rule("exp", exp -> {
-                    exp.ref("sum");
-                })
-                .rule("sum", sum -> {
-                    sum.ref("mul").term("+").ref("exp")
-                        .alt()
-                        .ref("mul");
-                })
-                .rule("mul", mul -> {
-                    mul.ref("atom").term("*").ref("exp")
-                        .alt()
-                        .ref("atom");
-                })
-                .rule("atom", atom -> {
-                    atom.term("1")
-                        .alt()
-                        .term("(").ref("exp").term(")");
-                })
-                .build();
+        var gr = validMath;
 
         assertTrue(gr.rules().size() == 4);
 
@@ -57,7 +59,8 @@ public class GrammarBuildTest {
                     Ascii.Color.White.foreground() +
                         ident +
                         Ascii.Color.Default.foreground() +
-                        nodeText
+                        nodeText +
+                        "[" + rule.indexOf(defpath.definition()) + "]"
                 );
             });
         });
@@ -126,27 +129,7 @@ public class GrammarBuildTest {
     @SuppressWarnings({"SimplifiableAssertion", "Convert2MethodRef"})
     @Test
     public void recusiveFind() {
-        var gr =
-            Grammar.grammar()
-                .rule("exp", exp -> {
-                    exp.ref("sum");
-                })
-                .rule("sum", sum -> {
-                    sum.ref("mul").term("+").ref("exp")
-                        .alt()
-                        .ref("mul");
-                })
-                .rule("mul", mul -> {
-                    mul.ref("atom").term("*").ref("exp")
-                        .alt()
-                        .ref("atom");
-                })
-                .rule("atom", atom -> {
-                    atom.term("1")
-                        .alt()
-                        .term("(").ref("exp").term(")");
-                })
-                .build();
+        var gr = validMath;
 
         var recursiveRefs = RecursiveRef.find(gr);
         recursiveRefs.each(rr -> System.out.println(rr));

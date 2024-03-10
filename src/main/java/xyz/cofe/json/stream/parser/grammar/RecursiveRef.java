@@ -1,6 +1,8 @@
 package xyz.cofe.json.stream.parser.grammar;
 
 import xyz.cofe.coll.im.ImList;
+import xyz.cofe.coll.im.Tuple2;
+import xyz.cofe.json.stream.parser.grammar.impl.Ascii;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -64,13 +66,13 @@ public record RecursiveRef(ImList<PathNode> revPath) {
         @Override
         public String toString() {
             var defTxt = switch (defPath.definition()) {
-                case Grammar.Ref(var r) -> "ref(" + r + " o=" + offset + ")";
-                case Grammar.Term(var t) -> "term(" + t + " o=" + offset + ")";
-                case Grammar.Alternative ignored -> "alt(o=" + offset + ")";
-                case Grammar.Repeat ignored -> "repeat(o=" + offset + ")";
-                case Grammar.Sequence ignored -> "sequence(o=" + offset + ")";
+                case Grammar.Ref(var r) -> "ref(" + r + " ";
+                case Grammar.Term(var t) -> "term(" + t + " ";
+                case Grammar.Alternative ignored -> "alt(";
+                case Grammar.Repeat ignored -> "repeat(";
+                case Grammar.Sequence ignored -> "sequence(" ;
             };
-            return rule.name() + "/" + defTxt;
+            return rule.name() + "/" + defTxt + "o=" + offset + ")"+"["+rule.indexOf(defPath().definition())+"]";
         }
 
         public static PathNode of(Grammar.Rule rule) {
@@ -86,21 +88,22 @@ public record RecursiveRef(ImList<PathNode> revPath) {
 
     /**
      * Рекурсивный путь
+     *
      * @param revPath путь
      */
     public record RecursivePath(
         ImList<PathNode> revPath
     ) {
-        public static RecursivePath init(Grammar.Rule rule){
-            if( rule==null ) throw new IllegalArgumentException("rule==null");
+        public static RecursivePath init(Grammar.Rule rule) {
+            if (rule == null) throw new IllegalArgumentException("rule==null");
             return new RecursivePath(
                 ImList.of(PathNode.of(rule))
             );
         }
 
-        public RecursivePath add(PathNode node){
-            if( node==null ) throw new IllegalArgumentException("node==null");
-            return new RecursivePath( revPath.prepend(node) );
+        public RecursivePath add(PathNode node) {
+            if (node == null) throw new IllegalArgumentException("node==null");
+            return new RecursivePath(revPath.prepend(node));
         }
     }
 
@@ -122,7 +125,7 @@ public record RecursiveRef(ImList<PathNode> revPath) {
         var cycles = new ArrayList<RecursiveRef>();
 
         grammar.rules().each(start -> {
-            System.out.println("start " + start.name());
+            System.out.println("start " + Ascii.Color.Red.foreground() + Ascii.bold + start.name() + Ascii.reset);
 
             var visitedRuleName = new HashSet<String>();
             visitedRuleName.add(start.name());
@@ -143,6 +146,16 @@ public record RecursiveRef(ImList<PathNode> revPath) {
                     if (visitedRuleName.contains(ref.name())) {
                         // cycle detect
                         cycles.add(new RecursiveRef(headPath.revPath()));
+
+                        //TODO
+                        System.out.println( Ascii.bold + "recursive " + Ascii.reset +
+
+                            Ascii.Color.Magenta.foreground() + Ascii.bold +
+                            headPath.revPath().reverse().map(PathNode::toString)
+                            .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
+
+                            + Ascii.reset
+                        );
                     } else {
                         var follow =
                             grammar.rule(ref.name()).map(rule ->
@@ -164,11 +177,36 @@ public record RecursiveRef(ImList<PathNode> revPath) {
 
                     workSet = workSet.prepend(follow);
                 } else if (headNode.defPath.definition() instanceof Grammar.Sequence seq) {
-                    var follow = seq.seq().enumerate().map(
-                        d -> headPath.add(
-                            new PathNode(headNode.rule, headNode.defPath.append(d.value()), headNode.offset)
+                    var follow = seq.seq().foldLeft(
+                        Tuple2.of(
+                            ImList.<RecursivePath>of(),
+                            headNode.offset
+                        ),
+                        (acc, it) -> acc.map((paths, offCounter) ->
+                            {
+                                int off =
+                                    //headNode.offset +
+                                    offCounter +
+                                        switch (it) {
+                                            case Grammar.Term ignore -> 1;
+                                            default -> 0;
+                                        };
+
+                                return Tuple2.of(
+                                    paths.append(
+                                        headPath.add(
+                                            new PathNode(
+                                                headNode.rule,
+                                                headNode.defPath.append(it),
+                                                off
+                                            )
+                                        )
+                                    ),
+                                    off
+                                );
+                            }
                         )
-                    );
+                    ).map((paths, ignore) -> paths);
 
                     debugShowFollow(follow, headNode);
 
@@ -202,7 +240,7 @@ public record RecursiveRef(ImList<PathNode> revPath) {
     }
 
     private static void dubugShowHead(RecursivePath r_path) {
-        System.out.println("head path " +
+        System.out.println(Ascii.Color.White.foreground() + "head path " + Ascii.reset +
             r_path.revPath().reverse()
                 .map(PathNode::toString)
                 .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
@@ -211,10 +249,10 @@ public record RecursiveRef(ImList<PathNode> revPath) {
 
     private static void debugShowFollow(ImList<RecursivePath> follow, PathNode headNode) {
         // TODO debug
-        System.out.println("follow (" + follow.size() + ") from " + headNode);
+        System.out.println(Ascii.Color.White.foreground() + "follow (" + follow.size() + ") from " + Ascii.reset + headNode);
 
         // TODO debug
-        follow.each(path -> System.out.println(path.revPath.reverse()
+        follow.each(path -> System.out.println("  " + path.revPath.reverse()
             .map(PathNode::toString)
             .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
         ));
