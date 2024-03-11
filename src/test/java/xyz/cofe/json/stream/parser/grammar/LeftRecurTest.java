@@ -23,12 +23,14 @@ public class LeftRecurTest {
                 })
                 .build();
 
-//        var lrec = LeftRecursion.find(gr);
-//
-//        System.out.println("found " + lrec.size() + ":");
-//        lrec.each(rec -> System.out.println(rec.leftRecursion()));
-//
-//        assertTrue(lrec.size() > 0);
+        var rrefs = RecursiveRef.find(gr);
+        System.out.println("recursions:");
+        rrefs.each(System.out::println);
+
+        var lrefCount = rrefs.foldLeft(0,(acc,it)->acc + (it.isLeftRecursion() ? 1 : 0));
+        System.out.println("lrefCount "+lrefCount);
+
+        assertTrue(lrefCount>0);
     }
 
     /**
@@ -53,12 +55,14 @@ public class LeftRecurTest {
                 })
                 .build();
 
-//        var lrec = LeftRecursion.find(gr);
-//
-//        System.out.println("found " + lrec.size() + ":");
-//        lrec.each(rec -> System.out.println(rec.leftRecursion()));
-//
-//        assertTrue(lrec.size() > 0);
+        var rrefs = RecursiveRef.find(gr);
+        System.out.println("recursions:");
+        rrefs.each(System.out::println);
+
+        var lrefCount = rrefs.foldLeft(0,(acc,it)->acc + (it.isLeftRecursion() ? 1 : 0));
+        System.out.println("lrefCount "+lrefCount);
+
+        assertTrue(lrefCount>0);
     }
 
     /**
@@ -82,16 +86,14 @@ public class LeftRecurTest {
                 })
                 .build();
 
-        System.out.println(gr);
+        var rrefs = RecursiveRef.find(gr);
+        System.out.println("recursions:");
+        rrefs.each(System.out::println);
 
-        var recur = RecursiveRef.find(gr);
-        System.out.println("rec found " + recur.size() + ":");
-        recur.each(System.out::println);
+        var lrefCount = rrefs.foldLeft(0,(acc,it)->acc + (it.isLeftRecursion() ? 1 : 0));
+        System.out.println("lrefCount "+lrefCount);
 
-//        var lrec = LeftRecursion.find(gr);
-//
-//        System.out.println("left found " + lrec.size() + ":");
-//        lrec.each(rec -> System.out.println(rec.leftRecursion()));
+        assertTrue(lrefCount>0);
     }
 
     /**
@@ -115,10 +117,15 @@ public class LeftRecurTest {
                 })
                 .build();
 
-//        var lrec = LeftRecursion.find(gr);
-//
-//        System.out.println("found " + lrec.size() + ":");
-//        lrec.each(rec -> System.out.println(rec.leftRecursion()));
+
+        var rrefs = RecursiveRef.find(gr);
+        System.out.println("recursions:");
+        rrefs.each(System.out::println);
+
+        var lrefCount = rrefs.foldLeft(0,(acc,it)->acc + (it.isLeftRecursion() ? 1 : 0));
+        System.out.println("lrefCount "+lrefCount);
+
+        assertTrue(lrefCount>0);
     }
 
     /**
@@ -141,10 +148,15 @@ public class LeftRecurTest {
                 })
                 .build();
 
-//        var lrec = LeftRecursion.find(gr);
-//
-//        System.out.println("found " + lrec.size() + ":");
-//        lrec.each(rec -> System.out.println(rec.leftRecursion()));
+
+        var rrefs = RecursiveRef.find(gr);
+        System.out.println("recursions:");
+        rrefs.each(System.out::println);
+
+        var lrefCount = rrefs.foldLeft(0,(acc,it)->acc + (it.isLeftRecursion() ? 1 : 0));
+        System.out.println("lrefCount "+lrefCount);
+
+        assertTrue(lrefCount>0);
     }
 
     /**
@@ -168,9 +180,14 @@ public class LeftRecurTest {
                 })
                 .build();
 
-//        var lrec = LeftRecursion.find(gr);
-//
-//        System.out.println("found " + lrec.size() + ":");
-//        lrec.each(rec -> System.out.println(rec.leftRecursion()));
+
+        var rrefs = RecursiveRef.find(gr);
+        System.out.println("recursions:");
+        rrefs.each(System.out::println);
+
+        var lrefCount = rrefs.foldLeft(0,(acc,it)->acc + (it.isLeftRecursion() ? 1 : 0));
+        System.out.println("lrefCount "+lrefCount);
+
+        assertTrue(lrefCount>0);
     }
 }

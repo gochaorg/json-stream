@@ -156,5 +156,8 @@ public class GrammarBuildTest {
         // recursive rule atom, path atom/ref(exp)[4] > exp/ref(sum)[0] > sum/ref(mul)[2] > mul/ref(atom)[2]
         // recursive rule atom, path atom/ref(exp)[4] > exp/ref(sum)[0] > sum/ref(mul)[2] > mul/ref(atom)[5]
         assertTrue( groupByRule.get("atom").size()==2 );
+
+        var leftRecCount = recursiveRefs.foldLeft(0, (acc,it) -> acc + (it.isLeftRecursion() ? 1 : 0) );
+        assertTrue(leftRecCount < 1);
     }
 }

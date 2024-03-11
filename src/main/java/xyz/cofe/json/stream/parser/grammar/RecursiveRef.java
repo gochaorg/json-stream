@@ -13,6 +13,10 @@ import java.util.WeakHashMap;
 
 /**
  * Рекурсивная ссылка
+ * <p>
+ * Может быть обычной рекурсивной ссылкой или "левой" рекурсией.
+ * <p>
+ * Левая рекурсия когда правило имеет такой вывод: A → At
  *
  * @param revPath реверсивный путь (от конца к началу)
  */
@@ -47,19 +51,19 @@ public record RecursiveRef(ImList<PathNode> revPath) {
 
     /**
      * Рекурсия является "левой"
+     *
      * @return true - левая рекурсия
      */
-    public boolean isLeftRecursion(){
-        return lastRefNode().map(n -> n.offset==0).orElse(false);
+    public boolean isLeftRecursion() {
+        return lastRefNode().map(n -> n.offset == 0).orElse(false);
     }
 
     @Override
     public String toString() {
-        return "recursive ref: rule="
+        return "recursive ref" + (isLeftRecursion() ? "(left recursion)" : "") + ": rule="
             + startRule().map(Grammar.Rule::name).orElse("?")
             + " path=" + revPath().map(
-                n -> n.toString()
-                    //+ "[" + n.rule().indexOf(n.defPath().definition()) + "]"
+                PathNode::toString
             ).reverse()
             .foldLeft("", (acc, it) -> acc.isBlank() ? it : acc + " > " + it)
             ;
@@ -79,9 +83,9 @@ public record RecursiveRef(ImList<PathNode> revPath) {
                 case Grammar.Term(var t) -> "term(" + t + " ";
                 case Grammar.Alternative ignored -> "alt(";
                 case Grammar.Repeat ignored -> "repeat(";
-                case Grammar.Sequence ignored -> "sequence(" ;
+                case Grammar.Sequence ignored -> "sequence(";
             };
-            return rule.name() + "/" + defTxt + "o=" + offset + ")"+"["+rule.indexOf(defPath().definition())+"]";
+            return rule.name() + "/" + defTxt + "o=" + offset + ")" + "[" + rule.indexOf(defPath().definition()) + "]";
         }
 
         public static PathNode of(Grammar.Rule rule) {
@@ -185,7 +189,6 @@ public record RecursiveRef(ImList<PathNode> revPath) {
                         (acc, it) -> acc.map((paths, offCounter) ->
                             {
                                 int off =
-                                    //headNode.offset +
                                     offCounter +
                                         switch (it) {
                                             case Grammar.Term ignore -> 1;
@@ -239,26 +242,30 @@ public record RecursiveRef(ImList<PathNode> revPath) {
         return result;
     }
 
-    private static boolean debugEnable(){ return false; }
-    private static void debugAddCycle(RecursivePath headPath) {
-        if( !debugEnable() )return;
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    private static boolean debugEnable() {return false;}
 
-        System.out.println( Ascii.bold + "recursive " + Ascii.reset +
+    private static void debugAddCycle(RecursivePath headPath) {
+        if (!debugEnable()) return;
+
+        System.out.println(Ascii.bold + "recursive " + Ascii.reset +
 
             Ascii.Color.Magenta.foreground() + Ascii.bold +
             headPath.revPath().reverse().map(PathNode::toString)
-            .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
+                .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
 
             + Ascii.reset
         );
     }
+
     private static void debugStartRule(Grammar.Rule start) {
-        if( !debugEnable() )return;
+        if (!debugEnable()) return;
 
         System.out.println("start " + Ascii.Color.Red.foreground() + Ascii.bold + start.name() + Ascii.reset);
     }
+
     private static void debugShowHead(RecursivePath r_path) {
-        if( !debugEnable() )return;
+        if (!debugEnable()) return;
 
         System.out.println(Ascii.Color.White.foreground() + "head path " + Ascii.reset +
             r_path.revPath().reverse()
@@ -266,8 +273,9 @@ public record RecursiveRef(ImList<PathNode> revPath) {
                 .foldLeft("", (acc, it) -> !acc.isEmpty() ? acc + " > " + it : it)
         );
     }
+
     private static void debugShowFollow(ImList<RecursivePath> follow, PathNode headNode) {
-        if( !debugEnable() )return;
+        if (!debugEnable()) return;
 
         System.out.println(Ascii.Color.White.foreground() + "follow (" + follow.size() + ") from " + Ascii.reset + headNode);
 
