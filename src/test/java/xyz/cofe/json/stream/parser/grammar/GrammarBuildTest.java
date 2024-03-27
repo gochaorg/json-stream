@@ -44,13 +44,13 @@ public class GrammarBuildTest {
 
         gr.rules().each(rule -> {
             System.out.println("rule " +
-                Ascii.bold + rule.name() + Ascii.reset
+                Ascii.Color.Red.foreground() + Ascii.bold + rule.name() + Ascii.reset
             );
             rule.definition().walk().tree().each(defpath -> {
                 String ident = ">>> ".repeat(defpath.directPath().size());
                 String nodeText = switch (defpath.definition()) {
-                    case Grammar.Term(var txt) -> "Term " + txt;
-                    case Grammar.Ref(var ref) -> "Ref " + Ascii.italicOn + ref + Ascii.reset;
+                    case Grammar.Term(var txt) -> "Term " + Ascii.Color.Blue.foreground() + Ascii.bold + txt + Ascii.reset;
+                    case Grammar.Ref(var ref) -> "Ref " + Ascii.italicOn + Ascii.Color.Magenta.foreground() + ref + Ascii.reset;
                     case Grammar.Repeat r -> "Repeat";
                     case Grammar.Alternative a -> "Alternative";
                     case Grammar.Sequence s -> "Sequence";
@@ -60,7 +60,7 @@ public class GrammarBuildTest {
                         ident +
                         Ascii.Color.Default.foreground() +
                         nodeText +
-                        "[" + rule.indexOf(defpath.definition()) + "]"
+                        Ascii.Color.White.foreground() + " [" + rule.indexOf(defpath.definition()) + "]" + Ascii.reset
                 );
             });
         });
