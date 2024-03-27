@@ -1,7 +1,6 @@
 package xyz.cofe.json.stream.parser.grammar.parser;
 
 import xyz.cofe.coll.im.ImList;
-import xyz.cofe.coll.im.Tuple2;
 import xyz.cofe.json.stream.parser.grammar.Pointer;
 import xyz.cofe.json.stream.parser.grammar.lexer.Matched;
 

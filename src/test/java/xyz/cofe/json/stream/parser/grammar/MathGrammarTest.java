@@ -83,5 +83,7 @@ public class MathGrammarTest {
 
         var parsedOpt = parser.parse(MathGrammar.PlusOperation.class, ptr);
         System.out.println(parsedOpt.get());
+
+        var parsed = parsedOpt.get().value();
     }
 }

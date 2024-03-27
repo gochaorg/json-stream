@@ -4,7 +4,6 @@ import xyz.cofe.coll.im.ImList;
 import xyz.cofe.coll.im.Result;
 import xyz.cofe.json.stream.parser.grammar.bind.Rule;
 import xyz.cofe.json.stream.parser.grammar.bind.TermBind;
-import xyz.cofe.json.stream.parser.grammar.bind.TermBinds;
 import xyz.cofe.json.stream.parser.grammar.lexer.Lexer;
 
 import java.lang.reflect.Method;
