@@ -1,4 +1,4 @@
-package xyz.cofe.grammar.bind;
+package xyz.cofe.grammar.ll.bind;
 
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;

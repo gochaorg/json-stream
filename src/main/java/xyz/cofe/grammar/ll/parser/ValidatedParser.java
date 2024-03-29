@@ -1,7 +1,7 @@
-package xyz.cofe.grammar.parser;
+package xyz.cofe.grammar.ll.parser;
 
 import xyz.cofe.coll.im.ImList;
-import xyz.cofe.grammar.bind.TermBind;
+import xyz.cofe.grammar.ll.bind.TermBind;
 
 import java.lang.reflect.Type;
 

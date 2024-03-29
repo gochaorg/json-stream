@@ -1,8 +1,8 @@
-package xyz.cofe.grammar.parser;
+package xyz.cofe.grammar.ll.parser;
 
 import xyz.cofe.coll.im.ImList;
 import xyz.cofe.coll.im.Result;
-import xyz.cofe.grammar.lexer.Lexer;
+import xyz.cofe.grammar.ll.lexer.Lexer;
 
 import java.util.HashMap;
 import java.util.HashSet;

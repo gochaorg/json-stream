@@ -1,11 +1,11 @@
-package xyz.cofe.grammar;
+package xyz.cofe.grammar.ll;
 
 import org.junit.jupiter.api.Test;
 import xyz.cofe.coll.im.ImList;
-import xyz.cofe.grammar.lexer.Lexer;
-import xyz.cofe.grammar.parser.AstParser;
-import xyz.cofe.grammar.parser.Param;
-import xyz.cofe.grammar.parser.SomeParsers;
+import xyz.cofe.grammar.ll.lexer.Lexer;
+import xyz.cofe.grammar.ll.parser.AstParser;
+import xyz.cofe.grammar.ll.parser.Param;
+import xyz.cofe.grammar.ll.parser.SomeParsers;
 
 import java.text.DecimalFormat;
 import java.util.Arrays;

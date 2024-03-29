@@ -1,8 +1,8 @@
-package xyz.cofe.grammar.parser;
+package xyz.cofe.grammar.ll.parser;
 
 import xyz.cofe.coll.im.ImList;
-import xyz.cofe.grammar.Pointer;
-import xyz.cofe.grammar.lexer.Matched;
+import xyz.cofe.grammar.ll.Pointer;
+import xyz.cofe.grammar.ll.lexer.Matched;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;

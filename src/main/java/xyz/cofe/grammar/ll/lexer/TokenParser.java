@@ -1,6 +1,6 @@
-package xyz.cofe.grammar.lexer;
+package xyz.cofe.grammar.ll.lexer;
 
-import xyz.cofe.grammar.bind.TermBind;
+import xyz.cofe.grammar.ll.bind.TermBind;
 
 import java.lang.reflect.Type;
 import java.util.Optional;

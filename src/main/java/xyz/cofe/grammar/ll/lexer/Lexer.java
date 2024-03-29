@@ -1,9 +1,9 @@
-package xyz.cofe.grammar.lexer;
+package xyz.cofe.grammar.ll.lexer;
 
 import xyz.cofe.coll.im.ImList;
 import xyz.cofe.coll.im.Tuple2;
-import xyz.cofe.grammar.bind.TermBind;
-import xyz.cofe.grammar.bind.Terms;
+import xyz.cofe.grammar.ll.bind.TermBind;
+import xyz.cofe.grammar.ll.bind.Terms;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;

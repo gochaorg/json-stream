@@ -1,4 +1,4 @@
-package xyz.cofe.grammar;
+package xyz.cofe.grammar.ll;
 
 import xyz.cofe.coll.im.ImList;
 

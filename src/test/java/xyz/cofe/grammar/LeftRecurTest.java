@@ -50,10 +50,7 @@ public class LeftRecurTest {
                     exp.ref("b");
                 })
                 .rule("b", sum -> {
-                    sum.ref("a").ref("c");
-                })
-                .rule("c", sum -> {
-                    sum.term("d").ref("c");
+                    sum.ref("a");
                 })
                 .build();
 

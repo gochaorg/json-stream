@@ -1,9 +1,9 @@
-package xyz.cofe.grammar;
+package xyz.cofe.grammar.ll;
 
-import xyz.cofe.grammar.bind.Rule;
-import xyz.cofe.grammar.bind.TermBind;
-import xyz.cofe.grammar.bind.Terms;
-import xyz.cofe.grammar.lexer.Matched;
+import xyz.cofe.grammar.ll.bind.Rule;
+import xyz.cofe.grammar.ll.bind.TermBind;
+import xyz.cofe.grammar.ll.bind.Terms;
+import xyz.cofe.grammar.ll.lexer.Matched;
 
 import java.util.Optional;
 

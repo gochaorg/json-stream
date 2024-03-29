@@ -1,4 +1,4 @@
-package xyz.cofe.grammar.lexer;
+package xyz.cofe.grammar.ll.lexer;
 
 import java.util.Objects;
 
