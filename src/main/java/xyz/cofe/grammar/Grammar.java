@@ -7,6 +7,7 @@ import xyz.cofe.grammar.impl.Visit;
 
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
@@ -25,6 +26,15 @@ public record Grammar(
         if( name==null ) throw new IllegalArgumentException("name==null");
         var lst = DuplicateRuleName.ruleMapOf(this).get(name);
         return lst==null ? ImList.of() : ImList.of(lst);
+    }
+
+    /**
+     * Возвращает первое правило
+     * @param name имя
+     * @return правило
+     */
+    public Optional<Rule> firstRule(String name){
+        return rule(name).head();
     }
 
     /**

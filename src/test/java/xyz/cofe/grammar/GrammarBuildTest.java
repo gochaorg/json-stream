@@ -68,27 +68,6 @@ public class GrammarBuildTest {
     }
 
     @Test
-    public void first(){
-        System.getProperties().put(RecursiveVisitor.class.getName()+".debug", "true");
-
-        var gr = validMath;
-        gr.rule("atom").each( rule -> {
-            RecursiveVisitor.visit(gr, rule, recursivePath -> {
-                System.out.println(
-                    "$$$ "+
-                        recursivePath.revPath().head().map( n -> {
-                            return
-                                "["+
-                                n.offset()+
-                                "] "+
-                                n.defPath().directPath().last().map(Object::toString).orElse("?");
-                        } ).orElse("?")
-                );
-            });
-        });
-    }
-
-    @Test
     public void duplicate() {
         var gr =
             Grammar.grammar()

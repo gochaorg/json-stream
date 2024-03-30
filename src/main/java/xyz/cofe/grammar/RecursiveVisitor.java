@@ -15,6 +15,7 @@ public class RecursiveVisitor {
     private final HashSet<String> visitedRuleName;
     private ImList<RecursivePath> workSet;
     private ImList<RecursiveRef> cycles;
+    private final Weight weight;
 
     public static RecursiveVisitor visit(Grammar grammar, Grammar.Rule start, Consumer<RecursivePath> currentPath){
         if( grammar==null ) throw new IllegalArgumentException("grammar==null");
@@ -40,6 +41,7 @@ public class RecursiveVisitor {
         this.visitedRuleName = new HashSet<>();
         this.workSet = ImList.of();
         this.cycles = ImList.of();
+        this.weight = new Weight(grammar);
     }
 
     public Set<String> visitedRuleNames(){ return visitedRuleName; }
@@ -109,12 +111,13 @@ public class RecursiveVisitor {
                 ),
                 (acc, it) -> acc.map((paths, offCounter) ->
                     {
-                        int off =
-                            offCounter +
-                                switch (it) {
-                                    case Grammar.Term ignore -> 1;
-                                    default -> 0;
-                                };
+                        int weight = switch (it) {
+                            case Grammar.Term ignore -> 1;
+                            //default -> 0; //todo need minWeight for Ref
+                            default -> this.weight.weightOf(it);
+                        };
+
+                        int nextOffset = offCounter + weight;
 
                         return Tuple2.of(
                             paths.append(
@@ -122,11 +125,11 @@ public class RecursiveVisitor {
                                     new RecursiveNode(
                                         headNode.rule(),
                                         headNode.defPath().append(it),
-                                        off
+                                        offCounter
                                     )
                                 )
                             ),
-                            off
+                            nextOffset
                         );
                     }
                 )
