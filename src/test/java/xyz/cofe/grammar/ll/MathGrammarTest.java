@@ -15,11 +15,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class MathGrammarTest {
     @Test
     public void intParse(){
-        var res1 = MathGrammar.IntNumber.parse("123",0);
+        var res1 = IntNumber.parse("123",0);
         assertTrue(res1.isPresent());
         System.out.println(res1);
 
-        var res2 = MathGrammar.IntNumber.parse("123 ",0);
+        var res2 = IntNumber.parse("123 ",0);
         assertTrue(res2.isPresent());
         System.out.println(res2);
     }

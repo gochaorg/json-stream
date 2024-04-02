@@ -18,6 +18,34 @@ import java.util.Set;
 
 /**
  * Лексический анализатор
+ *
+ * <p></p> При построении лексического анализатора {@link #build(Class)} производится
+ *
+ * <ul>
+ *     <li>
+ *         Поиск парсеров в указанном классе, вложенных классах и классах указанных в {@link Terms}
+ *     </li>
+ *     <li>
+ *         Каждый парсер - это статический метода вида:
+ *         <code>
+ *             public static Optional&lt;Matched&lt;<i>имя класса лексемы</i>&gt;&gt; parse(String source, int begin)
+ *         </code>
+ *         <p></p>
+ *         Имя метода не имеет значения
+ *     </li>
+ *     <li>
+ *         Для простых лексем можно использовать enum
+ *         <pre>
+ *             enum SomeTokens {
+ *                 &#x40;TermBind("==")
+ *                 EQUALS,
+ *
+ *                 &#x40;TermBind("&gt;")
+ *                 MORE
+ *             }
+ *         </pre>
+ *     </li>
+ * </ul>
  */
 public class Lexer {
     private Lexer(ImList<TokenParser> tokenParsers) {
