@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Лексический анализатор
+ */
 public class Lexer {
     private Lexer(ImList<TokenParser> tokenParsers) {
         if (tokenParsers == null) throw new IllegalArgumentException("tokenParsers==null");
@@ -81,7 +84,6 @@ public class Lexer {
         }
     }
 
-
     public ImList<TokenParser> parserOfToken(Type type){
         if( type==null ) throw new IllegalArgumentException("type==null");
         return tokenParsersByType().getOrDefault(type, ImList.of());
@@ -107,11 +109,26 @@ public class Lexer {
         });
     }
 
+    /**
+     * Создание лексера
+     * @param grammarRoot класс содержащий парсеры лексем
+     * @return Лексический анализатор
+     */
     public static Lexer build(Class<?> grammarRoot) {
         if (grammarRoot == null) throw new IllegalArgumentException("grammarRoot==null");
 
         List<Class<?>> workSet = new ArrayList<>();
         workSet.add(grammarRoot);
+
+        Arrays.stream(grammarRoot.getAnnotations()).forEach( a -> {
+            if( a instanceof Terms terms ){
+                for(var term : terms.value()){
+                    if( !workSet.contains(term) ){
+                        workSet.add(term);
+                    }
+                }
+            }
+        });
 
         List<TokenParser> tokenParsers = new ArrayList<>();
         Set<Class<?>> visited = new HashSet<>();
