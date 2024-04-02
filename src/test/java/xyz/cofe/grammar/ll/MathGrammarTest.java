@@ -52,6 +52,7 @@ public class MathGrammarTest {
         var parser2 = parser1.validate(lexer).map(AstParser::new);
 
         System.out.println(parser2.isOk());
+        parser2.getError().ifPresent(System.err::println);
 
         var parser = parser2.getOk().get();
 

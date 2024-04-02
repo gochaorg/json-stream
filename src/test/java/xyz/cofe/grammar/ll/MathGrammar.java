@@ -9,9 +9,11 @@ import java.util.Optional;
 @Terms({
     IntNumber.class,
     SumOp.class,
+    MulOp.class,
     Parentheses.class,
     Whitespace.class,
 })
+
 public class MathGrammar {
 
     public record PlusOperation(Expr left, Optional<SumOp> op, Optional<Expr> right) implements Expr {

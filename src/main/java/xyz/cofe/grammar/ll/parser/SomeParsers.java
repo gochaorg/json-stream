@@ -42,6 +42,12 @@ public class SomeParsers {
                 var parserOpt = StaticMethodParser.parse(mth);
                 if (parserOpt.isEmpty()) continue;
                 parsers = parsers.prepend(parserOpt.get());
+
+                for( var prm : parserOpt.get().parametersType() ){
+                    if( prm instanceof Class<?> paramCls ){
+                        workSet.add(paramCls);
+                    }
+                }
             }
         }
 
@@ -98,7 +104,14 @@ public class SomeParsers {
             var inputPattern = someParser.inputPattern(this, lexer);
             var undefInputCount = inputPattern.foldLeft(0, (acc, it) -> acc + (it.isError() ? 1 : 0));
             if (undefInputCount > 0) {
-                return Result.error("undefined input for " + someParser + "\nparameters: " + inputPattern);
+                return Result.error(
+                    "undefined input for " + someParser +
+                        "\nparameters:\n" +
+                        inputPattern.map(prmRes -> prmRes.fold(
+                            prm -> prm.toString(),
+                            err -> err
+                        )).enumerate().foldLeft("", (acc,it) -> acc + (acc.length()>0 ? "\n" : "") + "["+it.index()+"]="+it.value())
+                );
             }
 
             //noinspection OptionalGetWithoutIsPresent

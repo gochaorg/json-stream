@@ -175,11 +175,12 @@ public class Lexer {
             foundExplicitParsers.clear();
             for (var mth : cls.getMethods()) {
                 var tokenParserOpt = TokenParserStaticMethod.parse(mth);
-                if( tokenParserOpt.isEmpty() )continue;
 
-                var tokenParser = tokenParserOpt.get();
-                tokenParsers.add(tokenParser);
-                foundExplicitParsers.add(tokenParser);
+                if( tokenParserOpt.isPresent() ) {
+                    var tokenParser = tokenParserOpt.get();
+                    tokenParsers.add(tokenParser);
+                    foundExplicitParsers.add(tokenParser);
+                }
             }
 
             if( foundExplicitParsers.isEmpty() && cls.isEnum() ){
