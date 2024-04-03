@@ -67,4 +67,9 @@ public record IntNumber(int value) implements Expr {
 
         return Optional.empty();
     }
+
+    @Override
+    public String toString() {
+        return ""+value;
+    }
 }

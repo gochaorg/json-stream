@@ -26,6 +26,20 @@ public class MathGrammar {
         public static PlusOperation parse(MultipleOperation left) {
             return new PlusOperation(left, Optional.empty(), Optional.empty());
         }
+
+        @Override
+        public String toString() {
+            if (op().isPresent() && right.isPresent()) {
+                return "( " + left + (
+                    switch (op.get()) {
+                        case Plus -> " + ";
+                        case Minus -> " - ";
+                    }
+                ) + right.get() + " )";
+            }
+
+            return left.toString();
+        }
     }
 
     public record MultipleOperation(Expr left, Optional<MulOp> op, Optional<Expr> right) implements Expr {
@@ -38,6 +52,20 @@ public class MathGrammar {
         public static MultipleOperation parse(Atom left) {
             return new MultipleOperation(left, Optional.empty(), Optional.empty());
         }
+
+        @Override
+        public String toString() {
+            if (op().isPresent() && right.isPresent()) {
+                return "( "+left + (
+                    switch (op.get()) {
+                        case Div -> " / ";
+                        case Mul -> " * ";
+                    }
+                ) + right.get() + " )";
+            }
+
+            return left.toString();
+        }
     }
 
     public record Atom(Expr value) implements Expr {
@@ -49,6 +77,14 @@ public class MathGrammar {
         @Rule(order = 1)
         public static Atom parse(@TermBind("(") Parentheses left, Expr expr, @TermBind(")") Parentheses right) {
             return new Atom(expr);
+        }
+
+        @Override
+        public String toString() {
+            return switch (value) {
+                case IntNumber n -> n.toString();
+                default -> "(" + value.toString() + ")";
+            };
         }
     }
 }

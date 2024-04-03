@@ -49,7 +49,7 @@ public class MathGrammarTest {
         System.out.println("someParsers count "+someParsers.size());
 
         var lexer = Lexer.build(MathGrammar.class);
-        var parser2 = parser1.validate(lexer).map(AstParser::new);
+        var parser2 = parser1.validate(lexer).map(ruleParsers -> new AstParser(ruleParsers, lexer));
 
         System.out.println(parser2.isOk());
         parser2.getError().ifPresent(System.err::println);
@@ -79,10 +79,23 @@ public class MathGrammarTest {
             System.out.println("  out "+itParser.value().returnType());
         });
 
-        var source = "12 + 3";
-        var ptr = new Pointer.ImListPointer<>( lexer.parse(source,0) );
+        System.out.println("--------------------");
+        var source = "1 + 2 * 3 + 4";
+        var tokens = lexer.parse(source,0);
+        var df = new DecimalFormat("#000");
+        for( var t : tokens ){
+            System.out.println("["+
+                df.format(t.begin())+
+                " "+
+                df.format(t.end())+
+                "] "+
+                t.result()
+            );
+        }
 
-        var parsedOpt = parser.parse(MathGrammar.PlusOperation.class, ptr);
+        var ptr = new Pointer.ImListPointer<>( tokens );
+
+        var parsedOpt = parser.parse(Expr.class, ptr);
         System.out.println(parsedOpt.get());
 
         var parsed = parsedOpt.get().value();
