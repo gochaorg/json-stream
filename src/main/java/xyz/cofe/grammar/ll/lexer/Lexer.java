@@ -27,22 +27,23 @@ import java.util.Set;
  *     </li>
  *     <li>
  *         Каждый парсер - это статический метода вида:
- *         <code>
- *             public static Optional&lt;Matched&lt;<i>имя класса лексемы</i>&gt;&gt; parse(String source, int begin)
- *         </code>
- *         <p></p>
+ * <pre>
+ * public static Optional&lt;Matched&lt;<i>имя класса лексемы</i>&gt;&gt; parse(String source, int begin)
+ * </pre>
  *         Имя метода не имеет значения
  *     </li>
  *     <li>
- *         Для простых лексем можно использовать enum
+ *         Для простых лексем можно использовать enum.
+ *         <br>
+ *         Пример:
  *         <pre>
- *             enum SomeTokens {
- *                 &#x40;TermBind("==")
- *                 EQUALS,
+ * enum SomeTokens {
+ *     &#x40;TermBind("==")
+ *     EQUALS,
  *
- *                 &#x40;TermBind("&gt;")
- *                 MORE
- *             }
+ *     &#x40;TermBind("&gt;")
+ *     MORE
+ * }
  *         </pre>
  *     </li>
  * </ul>
