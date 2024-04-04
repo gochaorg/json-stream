@@ -8,10 +8,19 @@ import xyz.cofe.grammar.ll.lexer.Lexer;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
+/**
+ * Парсер сопоставление распознанной последовательности согласно правилу
+ * @param rule правило
+ * @param method
+ * @param returnType
+ * @param parametersType
+ */
 public record StaticMethodParser(
     Rule rule,
     Method method,
@@ -46,37 +55,54 @@ public record StaticMethodParser(
         return Optional.of(new StaticMethodParser(ruleAnn, method, retType, parameters));
     }
 
-    public ImList<Result<Param, String>> inputPattern(SomeParsers astParsers, Lexer lexer) {
+    /**
+     * Валидация функций сопоставления парсеров
+     * @param astParsers парсеры
+     * @param lexer лексер
+     * @return результат
+     */
+    public ImList<Result<? extends Param, String>> inputPattern(SomeParsers astParsers, Lexer lexer) {
         if (astParsers == null) throw new IllegalArgumentException("astParsers==null");
         if (lexer == null) throw new IllegalArgumentException("lexer==null");
 
-        ImList<Result<Param, String>> params = ImList.of();
+        ImList<Result<? extends Param, String>> params = ImList.of();
         var paramIndex = -1;
         var paramsAnns = method.getParameterAnnotations();
 
-        for (var pt : parametersType) {
+        for (var paramType : parametersType) {
             paramIndex++;
-            var termBinds = ImList.of(Arrays.asList(paramsAnns[paramIndex])).fmap(TermBind.class);
+            ImList<TermBind> termBinds = ImList.of(Arrays.asList(paramsAnns[paramIndex])).fmap(TermBind.class);
 
-            if (pt instanceof Class<?>) {
-                Class<?> pc = (Class<?>) pt;
-                var tokenParsers = lexer.parserOfToken(pc, termBinds);
-                if (tokenParsers.size() > 0) {
-                    var refs = new Param.TermRef(pc, tokenParsers);
-                    params = params.prepend(Result.ok(refs));
-                } else {
-                    var parsers = astParsers.parsersOf(pc);
-                    if (parsers.size() == 0) {
-                        params = params.prepend(Result.error("unsupported param type " + pt + ", not found lexem or non-term node"));
-                    } else {
-                        params = params.prepend(Result.ok(new Param.RuleRef(pc, ImList.of(parsers))));
-                    }
+            if( paramType instanceof Class<?> pc ) {
+                params = params.prepend( resolveParam(termBinds,pc,astParsers,lexer) );
+            } else if( paramType instanceof ParameterizedType pzt && pzt.getRawType() instanceof Class<?> rt ) {
+                if( rt==List.class && pzt.getActualTypeArguments().length==1 && pzt.getActualTypeArguments()[0] instanceof Class<?> pc ){
+                    params = params.prepend(
+                        resolveParam(termBinds,pc,astParsers,lexer).map( prm -> new Param.Repeat(prm) )
+                    );
+                }else{
+                    params = params.prepend(Result.error("unsupported param type " + paramType));
                 }
             } else {
-                params = params.prepend(Result.error("unsupported param type " + pt));
+                params = params.prepend(Result.error("unsupported param type " + paramType));
             }
         }
 
         return params.reverse();
+    }
+
+    private Result<Param.RepeatableParam, String> resolveParam( ImList<TermBind> termBinds, Class<?> pc, SomeParsers astParsers, Lexer lexer ){
+        var tokenParsers = lexer.parserOfToken(pc, termBinds);
+        if (tokenParsers.size() > 0) {
+            var refs = new Param.TermRef(pc, tokenParsers);
+            return Result.ok(refs);
+        } else {
+            var parsers = astParsers.parsersOf(pc);
+            if (parsers.size() == 0) {
+                return Result.error("unsupported param type " + pc + ", not found lexem or non-term node");
+            } else {
+                return Result.ok(new Param.RuleRef(pc, ImList.of(parsers)));
+            }
+        }
     }
 }

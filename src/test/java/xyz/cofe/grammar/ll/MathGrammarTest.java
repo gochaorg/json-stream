@@ -43,61 +43,22 @@ public class MathGrammarTest {
 
     @Test
     public void parseTest(){
-        //var parser = Parser.build(MathGrammar.class);
-        var parser1 = SomeParsers.parse(MathGrammar.class);
-        var someParsers = parser1.parsersOf(MathGrammar.Atom.class);
-        System.out.println("someParsers count "+someParsers.size());
+        var rawParser = SomeParsers.parse(MathGrammar.class);
 
         var lexer = Lexer.build(MathGrammar.class);
-        var parser2 = parser1.validate(lexer).map(ruleParsers -> new AstParser(ruleParsers, lexer));
+        var astParser = rawParser.validate(lexer).map(ruleParsers -> new AstParser(ruleParsers, lexer));
 
-        System.out.println(parser2.isOk());
-        parser2.getError().ifPresent(System.err::println);
+        System.out.println(astParser.isOk());
+        astParser.getError().ifPresent(System.err::println);
 
-        var parser = parser2.getOk().get();
-
-        Class<?> tok = MathGrammar.Atom.class;
-
-        var thisParsers = parser.parsersOf(tok);
-        thisParsers.enumerate().each( itParser -> {
-            System.out.println("("+itParser.index()+") input ");
-            itParser.value().inputPattern().enumerate().each(param -> {
-                System.out.println("  " + param.value().node());
-                var lines = switch (param.value()){
-                    case Param.RuleRef rr ->
-                        (ImList<String>) rr.parsers().map(m -> m.method().toString() );
-
-                    case Param.TermRef tr ->
-                        (ImList<String>) tr.parsers().map( t -> {
-                            return t.tokenType().toString() + " bind=" + Arrays.toString(t.binds()) + " "+itParser.value().termBindsOfParam((int)param.index());
-                        });
-                };
-                lines.each( line -> {
-                    System.out.println("    "+line);
-                });
-            });
-            System.out.println("  out "+itParser.value().returnType());
-        });
-
-        System.out.println("--------------------");
+        var parser = astParser.getOk().get();
         var source = "1 + 2 * 3 + 4";
         var tokens = lexer.parse(source,0);
-        var df = new DecimalFormat("#000");
-        for( var t : tokens ){
-            System.out.println("["+
-                df.format(t.begin())+
-                " "+
-                df.format(t.end())+
-                "] "+
-                t.result()
-            );
-        }
 
         var ptr = new Pointer.ImListPointer<>( tokens );
 
         var parsedOpt = parser.parse(Expr.class, ptr);
-        System.out.println(parsedOpt.get());
-
         var parsed = parsedOpt.get().value();
+        System.out.println(parsed);
     }
 }

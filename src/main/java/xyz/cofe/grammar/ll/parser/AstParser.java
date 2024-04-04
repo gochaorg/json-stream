@@ -6,11 +6,13 @@ import xyz.cofe.grammar.ll.lexer.Lexer;
 import xyz.cofe.grammar.ll.lexer.Matched;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -114,6 +116,7 @@ public class AstParser {
             level++;
 
             var values = new ArrayList<>();
+
             for (var param : parser.inputPattern()) {
                 switch (param) {
                     case Param.TermRef term -> {
@@ -125,6 +128,13 @@ public class AstParser {
                     }
                     case Param.RuleRef rule -> {
                         var opt = parse(rule, pointer);
+                        if (opt.isEmpty()) return Optional.empty();
+
+                        values.add(opt.get().value());
+                        pointer = opt.get().next();
+                    }
+                    case Param.Repeat rpt -> {
+                        var opt = parse(rpt, pointer);
                         if (opt.isEmpty()) return Optional.empty();
 
                         values.add(opt.get().value());
@@ -150,6 +160,30 @@ public class AstParser {
         }
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private <R, T> Optional<Parsed<R,T>> parse(Param.Repeat repeat, Pointer<T> pointer){
+        List lst = new ArrayList<>();
+        while (true){
+            var parsedOpt = this.<R,T>parse( repeat.param(), pointer );
+            if( parsedOpt.isEmpty() )break;
+
+            var parsed = parsedOpt.get();
+
+            pointer = parsed.next();
+            lst.add(parsed.value());
+        }
+
+        return Optional.of( new Parsed( lst, pointer ) );
+    }
+
+    private <R, T> Optional<Parsed<R,T>> parse(Param.RepeatableParam param, Pointer<T> pointer){
+        return switch (param) {
+            case Param.TermRef term -> parse(term, pointer);
+            case Param.RuleRef rule -> parse(rule, pointer);
+        };
+    }
+
+    @SuppressWarnings({"ReassignedVariable", "unchecked"})
     private <R, T> Optional<Parsed<R, T>> parse(Param.TermRef term, Pointer<T> pointer) {
         var tokOpt = pointer.get();
         if (tokOpt.isEmpty()) return Optional.empty();
@@ -167,6 +201,7 @@ public class AstParser {
         );
     }
 
+    @SuppressWarnings("unchecked")
     private <R, T> Optional<Parsed<R, T>> parse(Param.RuleRef rule, Pointer<T> pointer) {
         var values = new ArrayList<>();
         StaticMethodParser staticMethodParser = null;
@@ -189,6 +224,22 @@ public class AstParser {
                     values.add(parsed.value());
 
                     ptr = parsed.next();
+                } else if( param instanceof ParameterizedType pt && pt.getRawType()==List.class && pt.getActualTypeArguments().length==1 && pt.getActualTypeArguments()[0] instanceof Class<?>) {
+                    var lst = new ArrayList<>();
+                    var rpt = (Class<?>) pt.getActualTypeArguments()[0];
+
+                    while (true) {
+                        var parsedOpt = parse(rpt, ptr);
+                        if (parsedOpt.isPresent()) {
+                            var parsed = parsedOpt.get();
+                            lst.add(parsed.value());
+                            ptr = parsed.next();
+                        }else{
+                            break;
+                        }
+                    }
+
+                    values.add(lst);
                 } else {
                     throw new RuntimeException("!! bug !!");
                 }
