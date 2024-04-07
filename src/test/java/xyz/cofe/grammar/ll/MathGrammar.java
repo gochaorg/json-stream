@@ -13,9 +13,22 @@ import java.util.Optional;
     MulOp.class,
     Parentheses.class,
     Whitespace.class,
+    Ident.class,
+    Assign.class
 })
-
 public class MathGrammar {
+    public record AssignExpr(Ident ident, Expr expr) implements Expr {
+        @Rule
+        public static AssignExpr parse(Ident ident, Assign assign, Expr expr) {
+            return new AssignExpr(ident,expr);
+        }
+
+        @Override
+        public String toString() {
+            return ident.id() + " = " + expr;
+        }
+    }
+
     public record PlusRepeat(SumOp op, Expr right) {
         @Rule
         public static PlusRepeat parse(SumOp op, MultipleOperation right){
@@ -24,11 +37,6 @@ public class MathGrammar {
     }
 
     public record PlusOperation(Expr left, Optional<SumOp> op, Optional<Expr> right) implements Expr {
-//        @Rule(order = 0)
-//        public static PlusOperation parse(MultipleOperation left, SumOp op, Expr right) {
-//            return new PlusOperation(left, Optional.ofNullable(op), Optional.ofNullable(right));
-//        }
-
         @Rule(order = 5)
         public static PlusOperation parse(MultipleOperation left, List<PlusRepeat> tail) {
             var head = new PlusOperation(left, Optional.empty(), Optional.empty());;
@@ -72,11 +80,6 @@ public class MathGrammar {
     }
 
     public record MultipleOperation(Expr left, Optional<MulOp> op, Optional<Expr> right) implements Expr {
-//        @Rule(order = 0)
-//        public static MultipleOperation parse(Atom left, MulOp op, Expr right) {
-//            return new MultipleOperation(left, Optional.ofNullable(op), Optional.ofNullable(right));
-//        }
-
         @Rule(order = 5)
         public static MultipleOperation parse(Atom left, List<MultipleRepeat> tail) {
             var head = new MultipleOperation(left, Optional.empty(), Optional.empty());;
@@ -118,7 +121,12 @@ public class MathGrammar {
             return new Atom(number);
         }
 
-        @Rule(order = 1)
+        @Rule(order = 5)
+        public static Atom parse(Ident id) {
+            return new Atom(id);
+        }
+
+        @Rule(order = 10)
         public static Atom parse(@TermBind("(") Parentheses left, Expr expr, @TermBind(")") Parentheses right) {
             return new Atom(expr);
         }
@@ -127,7 +135,8 @@ public class MathGrammar {
         public String toString() {
             return switch (value) {
                 case IntNumber n -> n.toString();
-                default -> "(" + value.toString() + ")";
+                case Ident i -> i.id();
+                default -> "(" + value + ")";
             };
         }
     }

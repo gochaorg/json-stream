@@ -43,7 +43,7 @@ public class SomeParsers {
                 if (parserOpt.isEmpty()) continue;
                 parsers = parsers.prepend(parserOpt.get());
 
-                for( var prm : parserOpt.get().parametersType() ){
+                for( var prm : parserOpt.get().inputRawPattern() ){
                     if( prm instanceof Class<?> paramCls ){
                         workSet.add(paramCls);
                     }
@@ -65,8 +65,8 @@ public class SomeParsers {
 
             parsers.each(p -> {
                 m.put(
-                    p.returnType(),
-                    m.getOrDefault(p.returnType(), ImList.of()).prepend(p)
+                    p.ruleClass(),
+                    m.getOrDefault(p.ruleClass(), ImList.of()).prepend(p)
                 );
             });
 
@@ -98,7 +98,7 @@ public class SomeParsers {
 
         var validParsers = ImList.<ValidatedParser>of();
         for (var someParser : parsers) {
-            if (someParser.parametersType().length == 0)
+            if (someParser.inputRawPattern().length == 0)
                 return Result.error("no params for " + someParser);
 
             var inputPattern = someParser.inputPattern(this, lexer);
@@ -117,7 +117,7 @@ public class SomeParsers {
             //noinspection OptionalGetWithoutIsPresent
             ImList<Param> validInput = inputPattern.map(i -> i.getOk().get());
             validParsers = validParsers.prepend(new ValidatedParser(
-                someParser.returnType(),
+                someParser.ruleClass(),
                 validInput,
                 someParser
             ));

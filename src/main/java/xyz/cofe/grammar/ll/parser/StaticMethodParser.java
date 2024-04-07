@@ -18,18 +18,18 @@ import java.util.Optional;
  * Парсер сопоставление распознанной последовательности согласно правилу
  * @param rule правило
  * @param method
- * @param returnType
- * @param parametersType
+ * @param ruleClass
+ * @param inputRawPattern
  */
 public record StaticMethodParser(
     Rule rule,
     Method method,
-    Class<?> returnType,
-    Type[] parametersType
+    Class<?> ruleClass,
+    Type[] inputRawPattern
 ) {
     public ImList<TermBind> termBindOfParameter(int paramIndex){
         if( paramIndex<0 )return ImList.of();
-        if( paramIndex>=parametersType.length )return ImList.of();
+        if( paramIndex>= inputRawPattern.length )return ImList.of();
 
         var paramAnn2d = method.getParameterAnnotations();
         if( paramIndex>=paramAnn2d.length )return ImList.of();
@@ -48,6 +48,12 @@ public record StaticMethodParser(
 
         Class<?> retType = method.getReturnType();
         if (retType == Void.class) return Optional.empty();
+
+//        retType =
+//            ruleAnn.name() == Rule.class
+//            || ruleAnn.name() == Object.class
+//            ? retType
+//                : ruleAnn.name();
 
         var parameters = method.getGenericParameterTypes();
         if (parameters.length == 0) return Optional.empty();
@@ -69,7 +75,7 @@ public record StaticMethodParser(
         var paramIndex = -1;
         var paramsAnns = method.getParameterAnnotations();
 
-        for (var paramType : parametersType) {
+        for (var paramType : inputRawPattern) {
             paramIndex++;
             ImList<TermBind> termBinds = ImList.of(Arrays.asList(paramsAnns[paramIndex])).fmap(TermBind.class);
 
@@ -78,7 +84,7 @@ public record StaticMethodParser(
             } else if( paramType instanceof ParameterizedType pzt && pzt.getRawType() instanceof Class<?> rt ) {
                 if( rt==List.class && pzt.getActualTypeArguments().length==1 && pzt.getActualTypeArguments()[0] instanceof Class<?> pc ){
                     params = params.prepend(
-                        resolveParam(termBinds,pc,astParsers,lexer).map( prm -> new Param.Repeat(prm) )
+                        resolveParam(termBinds,pc,astParsers,lexer).map(Param.Repeat::new)
                     );
                 }else{
                     params = params.prepend(Result.error("unsupported param type " + paramType));

@@ -42,17 +42,36 @@ public class MathGrammarTest {
     }
 
     @Test
-    public void parseTest(){
+    public void parse1(){
         var rawParser = SomeParsers.parse(MathGrammar.class);
 
         var lexer = Lexer.build(MathGrammar.class);
         var astParser = rawParser.validate(lexer).map(ruleParsers -> new AstParser(ruleParsers, lexer));
 
-        System.out.println(astParser.isOk());
         astParser.getError().ifPresent(System.err::println);
 
         var parser = astParser.getOk().get();
         var source = "1 + 2 * 3 + 4";
+        var tokens = lexer.parse(source,0);
+
+        var ptr = new Pointer.ImListPointer<>( tokens );
+
+        var parsedOpt = parser.parse(Expr.class, ptr);
+        var parsed = parsedOpt.get().value();
+        System.out.println(parsed);
+    }
+
+    @Test
+    public void parse2(){
+        var rawParser = SomeParsers.parse(MathGrammar.class);
+
+        var lexer = Lexer.build(MathGrammar.class);
+        var astParser = rawParser.validate(lexer).map(ruleParsers -> new AstParser(ruleParsers, lexer));
+
+        astParser.getError().ifPresent(System.err::println);
+
+        var parser = astParser.getOk().get();
+        var source = "a = 1 + b";
         var tokens = lexer.parse(source,0);
 
         var ptr = new Pointer.ImListPointer<>( tokens );
