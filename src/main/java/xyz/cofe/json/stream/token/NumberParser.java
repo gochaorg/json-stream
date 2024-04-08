@@ -10,6 +10,7 @@ import java.util.function.Function;
 
 import static xyz.cofe.json.stream.token.TokenParsers.expect;
 import static xyz.cofe.json.stream.token.TokenParsers.join;
+import static xyz.cofe.json.stream.token.TokenParsers.or;
 
 /**
  * <pre>
@@ -55,6 +56,13 @@ public class NumberParser<S extends CharPointer<S>> implements TokenParser<S> {
         int sign = signTup._1();
         ptr = signTup._2();
 
+        var rawFloat = floatParse(ptr);
+        if (rawFloat.isPresent()) {
+            return rawFloat.map(
+                rawFloatSTuple2 ->
+                    new DoubleToken<>(rawFloatSTuple2._1().toDouble(), begin, rawFloatSTuple2._2()));
+        }
+
         var pptr = ptr;
         var rawInt = prefInt(pptr, 8, 'o', 'O')
             .or(() -> prefInt(pptr, 16, 'x', 'X'))
@@ -78,9 +86,7 @@ public class NumberParser<S extends CharPointer<S>> implements TokenParser<S> {
             }
         }
 
-        var rawFloat = floatParse(ptr);
-
-        return rawFloat.map(rawFloatSTuple2 -> new DoubleToken<>(rawFloatSTuple2._1().toDouble(), begin, rawFloatSTuple2._2()));
+        return Optional.empty();
     }
 
     public record RawFloat(String value) {
@@ -113,44 +119,21 @@ public class NumberParser<S extends CharPointer<S>> implements TokenParser<S> {
         Function<S, Optional<Tuple2<String, S>>> dot_frac_e_exp = join(dot, join(frac, join(e, exp)));
         Function<S, Optional<Tuple2<String, S>>> dot_frac = join(dot, frac);
 
-        var parseFun =
-            join(dec_dot_frac_e_sign_exp,
-                join(dec_dot_frac_e_exp,
-                    join(dec_dot_frac,
-                        join(dec_dot_e_sign_exp,
-                            join(dec_dot_e_exp,
-                                join(dec_dot,
-                                    join(dot_frac_e_sign_exp,
-                                        join(dot_frac_e_exp,
-                                            dot_frac))))))));
+        var parseFun = or(
+            dec_dot_frac_e_sign_exp,
+            dec_dot_frac_e_exp,
+            dec_dot_frac,
+            dec_dot_e_sign_exp,
+            dec_dot_e_exp,
+            dec_dot,
+            dot_frac_e_sign_exp,
+            dot_frac_e_exp,
+            dot_frac
+        );
 
-        return parseFun.apply(ptr).map(tup -> Tuple2.of(new RawFloat(tup._1()), tup._2()));
+        var r = parseFun.apply(ptr).map(tup -> Tuple2.of(new RawFloat(tup._1()), tup._2()));
+        return r;
     }
-
-//    private Function<S, Optional<Tuple2<String, S>>> join(Function<S, Optional<Tuple2<String, S>>> first, Function<S, Optional<Tuple2<String, S>>> second) {
-//        return ptr -> first.apply(ptr).flatMap(tup1 -> second.apply(tup1._2()).flatMap(tup2 -> Optional.of(Tuple2.of(tup1._1() + tup2._1(), tup2._2()))));
-//    }
-
-//    private Optional<Tuple2<String, S>> expect(S ptr, String text, boolean ignoreCase) {
-//        if (text.isEmpty()) return Optional.empty();
-//
-//        var buff = new StringBuilder();
-//
-//        for (var i = 0; i < text.length(); i++) {
-//            var copt = ptr.get(i);
-//            if (copt.isEmpty()) return Optional.empty();
-//
-//            char c0 = copt.get();
-//            char c1 = text.charAt(i);
-//
-//            var matched = ignoreCase ? Character.toLowerCase(c0) == Character.toLowerCase(c1) : c0 == c1;
-//            if (!matched) return Optional.empty();
-//
-//            buff.append(c0);
-//        }
-//
-//        return Optional.of(Tuple2.of(buff.toString(), ptr.move(text.length())));
-//    }
 
     private Optional<Tuple2<String, S>> dec_part(S ptr) {
         var c0 = ptr.get(0).flatMap(c -> {
@@ -199,7 +182,7 @@ public class NumberParser<S extends CharPointer<S>> implements TokenParser<S> {
                     var i = BigInteger.valueOf(it);
                     var r = i.multiply(k).add(n);
                     var k2 = k.multiply(base1);
-                    return Tuple2.of(r,k2);
+                    return Tuple2.of(r, k2);
                 }
             ).map((a, b) -> a);
         }

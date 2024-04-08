@@ -113,3 +113,38 @@ https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Grammar_and_types
               | '}'
               | ':'
               | ','
+
+Синтаксическая часть
+===============================
+
+- Примитивы
+  - Строка
+  - Идентификатор
+  - null
+  - false / true
+  - Число
+- Объекты
+- Массивы
+
+Синтаксис
+---------------------------
+
+    ast ::= primitive
+          | object
+          | array
+
+    primitive ::= string
+                | int
+                | float
+                | `true`
+                | `false`
+                | `null`
+
+    object ::= `{` [ keyValue { `,` keyValue } ] `}`
+
+    keyValue ::= key `:` ast
+
+    key ::= string
+          | id
+
+    array ::= `[` [ ast { `,` ast } ] `]`

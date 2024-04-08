@@ -35,4 +35,16 @@ public class TokenParsers {
 
         return ptr -> first.apply(ptr).flatMap(tup1 -> second.apply(tup1._2()).flatMap(tup2 -> Optional.of(Tuple2.of(tup1._1() + tup2._1(), tup2._2()))));
     }
+
+    public static <S extends CharPointer<S>> Function<S, Optional<Tuple2<String, S>>> or(
+        Function<S, Optional<Tuple2<String, S>>> ... parsers
+    ) {
+        return ptr -> {
+            for (var parser : parsers) {
+                var res = parser.apply(ptr);
+                if(res.isPresent()) return res;
+            }
+            return Optional.empty();
+        };
+    }
 }
