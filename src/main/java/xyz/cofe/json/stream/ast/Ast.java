@@ -10,18 +10,28 @@ import xyz.cofe.json.stream.token.FalseToken;
 import xyz.cofe.json.stream.token.IdentifierToken;
 import xyz.cofe.json.stream.token.IntToken;
 import xyz.cofe.json.stream.token.LongToken;
+import xyz.cofe.json.stream.token.MLComment;
 import xyz.cofe.json.stream.token.NullToken;
 import xyz.cofe.json.stream.token.OpenParentheses;
 import xyz.cofe.json.stream.token.OpenSquare;
+import xyz.cofe.json.stream.token.SLComment;
 import xyz.cofe.json.stream.token.StringToken;
 import xyz.cofe.json.stream.token.TrueToken;
 
 public sealed interface Ast<S extends CharPointer<S>> {
+    sealed interface Comment<S extends CharPointer<S>> {
+        record MultiLine<S extends CharPointer<S>>(MLComment<S> token) implements Comment<S> {}
+        record SingleLine<S extends CharPointer<S>>(SLComment<S> token) implements Comment<S> {}
+    }
+
     sealed interface Primitive {}
 
     sealed interface NumberAst<S extends CharPointer<S>> extends Ast<S>,
                                                                  Primitive {
-        record DoubleAst<S extends CharPointer<S>>(DoubleToken<S> token) implements NumberAst<S> {}
+        record DoubleAst<S extends CharPointer<S>>(
+            DoubleToken<S> token
+        ) implements NumberAst<S> {}
+
         record IntAst<S extends CharPointer<S>>(IntToken<S> token) implements NumberAst<S> {}
         record LongAst<S extends CharPointer<S>>(LongToken<S> token) implements NumberAst<S> {}
         record BigIntAst<S extends CharPointer<S>>(BigIntToken<S> token) implements NumberAst<S> {}

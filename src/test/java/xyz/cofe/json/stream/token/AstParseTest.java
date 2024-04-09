@@ -47,4 +47,33 @@ public class AstParseTest {
         assertTrue(arr2.values().get(0).map(v -> v instanceof Ast.StringAst<StringPointer>).orElse(false));
         assertTrue(arr2.values().get(1).map(v -> v instanceof Ast.NumberAst.DoubleAst<StringPointer>).orElse(false));
     }
+
+    @Test
+    public void obj() {
+        var source = """
+            { "a" : 1
+            , "b" : { }
+            , "c" : [ ]
+            , "d" : [ 1 ]
+            , "e" : { "f" : true
+                    }
+            }
+            """;
+        var parsed = Tokenizer.parse(source);
+
+        Ast<StringPointer> last = null;
+        AstParser<StringPointer> parser = new AstParser.Init<>();
+        for (var token : parsed.tokens()) {
+            System.out.println("token " + token);
+
+            var astParsed = parser.input(token);
+            parser = astParsed.parser();
+
+            astParsed.result().ifPresent(ast -> {
+                System.out.println("result " + ast);
+            });
+
+            last = astParsed.result().orElse(null);
+        }
+    }
 }
