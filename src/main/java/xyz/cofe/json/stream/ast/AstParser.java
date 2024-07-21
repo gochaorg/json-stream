@@ -56,6 +56,23 @@ Whitespace         | init   | obj   | obj.k | obj.v | arr   | arr.c
 
  */
 public sealed interface AstParser<S extends CharPointer<S>> {
+    default int getNestedLevel(){
+        int level = 0;
+        AstParser parser = this;
+        while (true){
+            if( parser instanceof AstParser.ObjectParser<?> op ){
+                parser = op.getParent();
+                level++;
+            }else if( parser instanceof AstParser.ArrayParser<?> ap ){
+                parser = ap.getParent();
+                level++;
+            }else {
+                break;
+            }
+        }
+        return level;
+    }
+
     record ParserOptions(
         boolean identAtRoot,
         boolean identInObjectKey,
@@ -114,6 +131,7 @@ public sealed interface AstParser<S extends CharPointer<S>> {
             this(new ParserOptions());
         }
 
+        @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
         private final List<Ast.Comment<S>> comments = new ArrayList<>();
 
         private List<Class<?>> startTokens() {
@@ -217,9 +235,10 @@ public sealed interface AstParser<S extends CharPointer<S>> {
         private final AstParser<S> parent;
         private final OpenParentheses<S> begin;
         private final Consumer<Ast<S>> resultConsumer;
+        @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
         private final List<Ast.Comment<S>> comments = new ArrayList<>();
 
-        private enum State {
+        public enum State {
             ExpectKey,
             AfterKey,
             ExpectValue,
@@ -228,8 +247,16 @@ public sealed interface AstParser<S extends CharPointer<S>> {
 
         private final List<Ast.KeyValue<S>> values = new ArrayList<>();
         private Ast.Key<S> key;
+        public Ast.Key<?> getKey(){
+            return key;
+        }
 
         private State state = State.ExpectKey;
+        public State getState(){
+            return state;
+        }
+
+        public AstParser<S> getParent() {return parent;}
 
         public ObjectParser(ParserOptions options, AstParser<S> parent, OpenParentheses<S> begin) {
             this.parent = parent;
@@ -527,8 +554,15 @@ public sealed interface AstParser<S extends CharPointer<S>> {
 
         private final List<Ast<S>> values = new ArrayList<>();
 
-        private enum State {ExpectValue, AfterValue}
+        public enum State {ExpectValue, AfterValue}
         private State state = State.ExpectValue;
+        public State getState(){
+            return state;
+        }
+
+        public AstParser<S> getParent(){
+            return parent;
+        }
 
         public ArrayParser(ParserOptions options, AstParser<S> parent, OpenSquare<S> begin) {
             this.begin = begin;
@@ -563,6 +597,7 @@ public sealed interface AstParser<S extends CharPointer<S>> {
             return tokens;
         }
 
+        @SuppressWarnings("unchecked")
         private Parsed<S> unexpectedValueToken(Token<S> token) {
             return unexpectedToken(token, valueTokens().toArray(new Class[0]));
         }

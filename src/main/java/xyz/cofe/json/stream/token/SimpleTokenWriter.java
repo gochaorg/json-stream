@@ -207,7 +207,7 @@ public class SimpleTokenWriter implements TokenWriter {
     public void write(Whitespace<?> token) {
         if( token==null ) throw new IllegalArgumentException("token==null");
         try {
-            output.append(" ");
+            output.append(token.value());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
