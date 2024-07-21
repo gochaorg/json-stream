@@ -1,5 +1,8 @@
 package xyz.cofe.json.stream.token;
 
+/**
+ * Функция преобразования символа в число
+ */
 public class Digit {
     public static int digit(char c, int base) {
         return switch (c) {

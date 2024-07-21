@@ -2,7 +2,7 @@ package xyz.cofe.json.stream.token;
 
 import java.util.Optional;
 
-public class StringPointer implements CharPointer<StringPointer> {
+public final class StringPointer implements CharPointer<StringPointer> {
     public final String source;
     public final int offset;
 

@@ -2,6 +2,13 @@ package xyz.cofe.json.stream.token;
 
 import java.util.Optional;
 
+/**
+ * Лексема идентификатор
+ * @param value значение лексемы
+ * @param begin начало лексемы
+ * @param end конец лексемы
+ * @param <S> тип исходника
+ */
 public record IdentifierToken<S extends CharPointer<S>>(
     String value,
     S begin,

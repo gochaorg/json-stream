@@ -2,6 +2,13 @@ package xyz.cofe.json.stream.token;
 
 import java.util.Optional;
 
+/**
+ * Однострочный комментарий
+ * @param value текст комментария
+ * @param begin начало в исходнике
+ * @param end конец в исходнике
+ * @param <S> Тип исходника
+ */
 public record SLComment<S extends CharPointer<S>>(
     String value,
     S begin,

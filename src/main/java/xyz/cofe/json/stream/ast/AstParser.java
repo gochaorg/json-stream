@@ -1,5 +1,6 @@
 package xyz.cofe.json.stream.ast;
 
+import jdk.security.jarsigner.JarSignerException;
 import xyz.cofe.coll.im.ImList;
 import xyz.cofe.json.stream.token.BigIntToken;
 import xyz.cofe.json.stream.token.CharPointer;
@@ -17,8 +18,10 @@ import xyz.cofe.json.stream.token.NullToken;
 import xyz.cofe.json.stream.token.OpenParentheses;
 import xyz.cofe.json.stream.token.OpenSquare;
 import xyz.cofe.json.stream.token.SLComment;
+import xyz.cofe.json.stream.token.StringPointer;
 import xyz.cofe.json.stream.token.StringToken;
 import xyz.cofe.json.stream.token.Token;
+import xyz.cofe.json.stream.token.Tokenizer;
 import xyz.cofe.json.stream.token.TrueToken;
 import xyz.cofe.json.stream.token.Whitespace;
 
@@ -193,6 +196,11 @@ public sealed interface AstParser<S extends CharPointer<S>> {
         }
     }
 
+    /**
+     * Ошибка парснга
+     * @param message сообщение
+     * @param <S> тип источника
+     */
     public record Error<S extends CharPointer<S>>(String message) implements AstParser<S> {
         @Override
         public Parsed<S> input(Token<S> token) {
@@ -200,6 +208,10 @@ public sealed interface AstParser<S extends CharPointer<S>> {
         }
     }
 
+    /**
+     * Парсинг вложенного объекта
+     * @param <S>
+     */
     public static final class ObjectParser<S extends CharPointer<S>> implements AstParser<S> {
         private final ParserOptions options;
         private final AstParser<S> parent;
@@ -503,6 +515,10 @@ public sealed interface AstParser<S extends CharPointer<S>> {
         }
     }
 
+    /**
+     * Парсинг вложенного массива
+     * @param <S>
+     */
     public static final class ArrayParser<S extends CharPointer<S>> implements AstParser<S> {
         private final ParserOptions options;
         private final AstParser<S> parent;
@@ -687,5 +703,54 @@ public sealed interface AstParser<S extends CharPointer<S>> {
 
             return err("!!");
         }
+    }
+
+    /**
+     * Ошибка парсинга
+     */
+    public static class JsonParseError extends java.lang.Error {
+        private final AstParser.Error<?> source;
+
+        public AstParser.Error<?> getSource(){ return source; }
+
+        public JsonParseError(AstParser.Error<?> source) {
+            super(source.message());
+            this.source = source;
+        }
+    }
+
+    /**
+     * Ошибка парсинга - нет результата, наверно не все данные были переданы
+     */
+    public static class NoResult extends java.lang.Error {
+        private final AstParser<?> parser;
+
+        public AstParser<?> getParser() {
+            return parser;
+        }
+
+        public NoResult(AstParser<?> parser){
+            super("no");
+            this.parser = parser;
+        }
+    }
+
+    public static Ast<?> parse(String source){
+        if( source==null ) throw new IllegalArgumentException("source==null");
+        var tokens = Tokenizer.parse(source);
+
+        AstParser<StringPointer> parser = new AstParser.Init<>();
+        for (var token : tokens.tokens()) {
+            var res = parser.input(token);
+            if( res.parser() instanceof AstParser.Error<StringPointer> err ){
+                throw new JsonParseError(err);
+            }
+            if( res.result().isPresent() ){
+                return res.result().get();
+            }
+            parser = res.parser();
+        }
+
+        throw new NoResult(parser);
     }
 }

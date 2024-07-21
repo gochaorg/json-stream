@@ -73,7 +73,11 @@ public class AstParseTest {
                 System.out.println("result " + ast);
             });
 
-            last = astParsed.result().orElse(null);
+            if( astParsed.result().isPresent() ){
+                last = astParsed.result().orElse(null);
+            }
         }
+
+        System.out.println("last = "+last);
     }
 }
