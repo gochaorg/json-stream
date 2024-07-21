@@ -227,7 +227,7 @@ public sealed interface AstParser<S extends CharPointer<S>> {
         }
 
         private final List<Ast.KeyValue<S>> values = new ArrayList<>();
-        private Ast.Key key;
+        private Ast.Key<S> key;
 
         private State state = State.ExpectKey;
 
