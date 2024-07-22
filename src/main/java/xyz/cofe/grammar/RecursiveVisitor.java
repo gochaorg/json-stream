@@ -111,11 +111,12 @@ public class RecursiveVisitor {
                 ),
                 (acc, it) -> acc.map((paths, offCounter) ->
                     {
-                        int weight = switch (it) {
-                            case Grammar.Term ignore -> 1;
-                            //default -> 0; //todo need minWeight for Ref
-                            default -> this.weight.weightOf(it);
-                        };
+                        int weight = 0;
+                        if( it instanceof Grammar.Term ){
+                            weight = 1;
+                        }else {
+                            weight = this.weight.weightOf(it);
+                        }
 
                         int nextOffset = offCounter + weight;
 

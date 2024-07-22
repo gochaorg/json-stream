@@ -125,33 +125,26 @@ public class Weight {
     private int compute(Definition definition, HashMap<Rule, Integer> visited, ImList<Object> path) {
         int weight = 0;
 
-        switch (definition) {
-            case Repeat rpt -> {
-                weight = 0;
-            }
-            case Term t -> {
-                weight = 1;
-            }
-            case Sequence seq -> {
-                weight = seq.seq().map(def -> compute(def, visited, path.prepend(def))).foldLeft(0, Integer::sum);
-            }
-            case Alternative alt -> {
-                weight = alt.alt().map(def -> compute(def, visited, path.prepend(def)))
-                    .foldLeft(Integer.MAX_VALUE, (acc, it) -> it < acc ? it : acc);
+        if( definition instanceof Repeat ){
+            weight = 0;
+        }else if( definition instanceof Term ){
+            weight = 1;
+        }else if( definition instanceof Sequence seq ){
+            weight = seq.seq().map(def -> compute(def, visited, path.prepend(def))).foldLeft(0, Integer::sum);
+        }else if( definition instanceof Alternative alt ){
+            weight = alt.alt().map(def -> compute(def, visited, path.prepend(def)))
+                .foldLeft(Integer.MAX_VALUE, (acc, it) -> it < acc ? it : acc);
 
-                if (weight == Integer.MAX_VALUE) throw new IllegalArgumentException("");
-            }
-            case Ref r -> {
-                weight = grammar.rule(r.name()).map(rule -> {
-                        var w = visited.get(rule);
-                        if (w != null) return w;
+            if (weight == Integer.MAX_VALUE) throw new IllegalArgumentException("");
+        }else if( definition instanceof Ref r ){
+            weight = grammar.rule(r.name()).map(rule -> {
+                    var w = visited.get(rule);
+                    if (w != null) return w;
 
-                        return weightOf(rule, visited, path.prepend(rule));
-                    })
-                    .foldLeft(Integer.MAX_VALUE, (acc, it) -> it < acc ? it : acc);
-            }
+                    return weightOf(rule, visited, path.prepend(rule));
+                })
+                .foldLeft(Integer.MAX_VALUE, (acc, it) -> it < acc ? it : acc);
         }
-
         return weight;
     }
 }

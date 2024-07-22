@@ -1,8 +1,8 @@
-package xyz.cofe.json.stream.token;
+package xyz.cofe.json.stream.ast;
 
 import org.junit.jupiter.api.Test;
-import xyz.cofe.json.stream.ast.Ast;
-import xyz.cofe.json.stream.ast.AstParser;
+import xyz.cofe.json.stream.token.StringPointer;
+import xyz.cofe.json.stream.token.Tokenizer;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

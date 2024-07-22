@@ -9,13 +9,14 @@ package xyz.cofe.grammar;
 public record RecursiveNode(Grammar.Rule rule, Grammar.Definition.DefPath defPath, int offset) {
     @Override
     public String toString() {
-        var defTxt = switch (defPath.definition()) {
-            case Grammar.Ref(var r) -> "ref(" + r + " ";
-            case Grammar.Term(var t) -> "term(" + t + " ";
-            case Grammar.Alternative ignored -> "alt(";
-            case Grammar.Repeat ignored -> "repeat(";
-            case Grammar.Sequence ignored -> "sequence(";
-        };
+        var de = defPath.definition();
+        String defTxt = "";
+        if( de instanceof Grammar.Ref a ) defTxt = "ref(" + a.name() + " ";
+        else if( de instanceof Grammar.Term a ) defTxt = "term(" + a.text() + " ";
+        else if( de instanceof Grammar.Alternative a ) defTxt = "alt(";
+        else if( de instanceof Grammar.Repeat a ) defTxt = "repeat(";
+        else if( de instanceof Grammar.Sequence a ) defTxt = "sequence(";
+
         return rule.name() + "/" + defTxt + "o=" + offset + ")" + "[" + rule.indexOf(defPath().definition()) + "]";
     }
 

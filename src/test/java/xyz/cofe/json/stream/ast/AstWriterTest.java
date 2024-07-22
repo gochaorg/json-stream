@@ -1,8 +1,9 @@
-package xyz.cofe.json.stream.token;
+package xyz.cofe.json.stream.ast;
 
 import org.junit.jupiter.api.Test;
-import xyz.cofe.json.stream.ast.AstParser;
-import xyz.cofe.json.stream.ast.AstWriter;
+import xyz.cofe.coll.im.ImList;
+import xyz.cofe.json.stream.token.IndentTokenWriter;
+import xyz.cofe.json.stream.token.SimpleTokenWriter;
 
 import java.io.StringWriter;
 
@@ -44,5 +45,16 @@ public class AstWriterTest {
         AstWriter.write(identTw, ast);
 
         System.out.println(strw.toString());
+    }
+
+    @Test
+    public void construct(){
+        var obj = Ast.ObjectAst.create(
+            ImList.of(
+                Ast.KeyValue.create(Ast.StringAst.create("key"), Ast.StringAst.create("value"))
+            )
+        );
+
+        System.out.println(AstWriter.toString(obj));
     }
 }

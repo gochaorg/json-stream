@@ -70,19 +70,15 @@ public class NumberParser<S extends CharPointer<S>> implements TokenParser<S> {
             .or(() -> decInt(pptr));
         if (rawInt.isPresent()) {
             var end = rawInt.get()._2();
-            switch (rawInt.get()._1().toPreferenceNumber(sign)) {
-                case RawInt.PreferenceNumber.Long lng -> {
-                    return Optional.of(new LongToken<>(lng.number(), begin, end));
-                }
-                case RawInt.PreferenceNumber.Int int0 -> {
-                    return Optional.of(new IntToken<>(int0.number(), begin, end));
-                }
-                case RawInt.PreferenceNumber.Big big -> {
-                    return Optional.of(new BigIntToken<>(big.number(), begin, end));
-                }
-                case RawInt.PreferenceNumber.OutOfLong lng2 -> {
-                    return Optional.of(new BigIntToken<>(lng2.number(), begin, end));
-                }
+            var pref = rawInt.get()._1().toPreferenceNumber(sign);
+            if( pref instanceof RawInt.PreferenceNumber.Long lng){
+                return Optional.of(new LongToken<>(lng.number(), begin, end));
+            } else if( pref instanceof RawInt.PreferenceNumber.Int int0){
+                return Optional.of(new IntToken<>(int0.number(), begin, end));
+            } else if( pref instanceof RawInt.PreferenceNumber.Big big){
+                return Optional.of(new BigIntToken<>(big.number(), begin, end));
+            } else if( pref instanceof RawInt.PreferenceNumber.OutOfLong lng2){
+                return Optional.of(new BigIntToken<>(lng2.number(), begin, end));
             }
         }
 

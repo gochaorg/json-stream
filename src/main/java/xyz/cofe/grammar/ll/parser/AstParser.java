@@ -117,28 +117,24 @@ public class AstParser {
             var values = new ArrayList<>();
 
             for (var param : parser.inputPattern()) {
-                switch (param) {
-                    case Param.TermRef term -> {
-                        var opt = parse(term, pointer);
-                        if (opt.isEmpty()) return Optional.empty();
+                if( param instanceof Param.TermRef term ){
+                    var opt = parse(term, pointer);
+                    if (opt.isEmpty()) return Optional.empty();
 
-                        values.add(opt.get().value());
-                        pointer = opt.get().next();
-                    }
-                    case Param.RuleRef rule -> {
-                        var opt = parse(rule, pointer);
-                        if (opt.isEmpty()) return Optional.empty();
+                    values.add(opt.get().value());
+                    pointer = opt.get().next();
+                }else if( param instanceof Param.RuleRef rule ){
+                    var opt = parse(rule, pointer);
+                    if (opt.isEmpty()) return Optional.empty();
 
-                        values.add(opt.get().value());
-                        pointer = opt.get().next();
-                    }
-                    case Param.Repeat rpt -> {
-                        var opt = parse(rpt, pointer);
-                        if (opt.isEmpty()) return Optional.empty();
+                    values.add(opt.get().value());
+                    pointer = opt.get().next();
+                }else if( param instanceof Param.Repeat rpt ){
+                    var opt = parse(rpt, pointer);
+                    if (opt.isEmpty()) return Optional.empty();
 
-                        values.add(opt.get().value());
-                        pointer = opt.get().next();
-                    }
+                    values.add(opt.get().value());
+                    pointer = opt.get().next();
                 }
             }
 
@@ -176,10 +172,9 @@ public class AstParser {
     }
 
     private <R, T> Optional<Parsed<R,T>> parse(Param.RepeatableParam param, Pointer<T> pointer){
-        return switch (param) {
-            case Param.TermRef term -> parse(term, pointer);
-            case Param.RuleRef rule -> parse(rule, pointer);
-        };
+        if( param instanceof Param.TermRef term ) return parse(term, pointer);
+        else if( param instanceof Param.RuleRef rule ) return parse(rule, pointer);
+        else throw new IllegalStateException("!!!");
     }
 
     @SuppressWarnings({"ReassignedVariable", "unchecked"})

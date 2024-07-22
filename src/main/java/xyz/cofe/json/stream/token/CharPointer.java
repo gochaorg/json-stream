@@ -5,6 +5,7 @@ package xyz.cofe.json.stream.token;
  * @param <SELF> "Собственный" тип
  */
 public sealed interface CharPointer<SELF extends SourcePointer<Character, SELF>> extends SourcePointer<Character,SELF>
-    permits StringPointer
+    permits DummyCharPointer,
+            StringPointer
 {
 }

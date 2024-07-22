@@ -49,13 +49,20 @@ public class GrammarBuildTest {
             );
             rule.definition().walk().tree().each(defpath -> {
                 String ident = ">>> ".repeat(defpath.directPath().size());
-                String nodeText = switch (defpath.definition()) {
-                    case Grammar.Term(var txt) -> "Term " + Ascii.Color.Blue.foreground() + Ascii.bold + txt + Ascii.reset;
-                    case Grammar.Ref(var ref) -> "Ref " + Ascii.italicOn + Ascii.Color.Magenta.foreground() + ref + Ascii.reset;
-                    case Grammar.Repeat r -> "Repeat";
-                    case Grammar.Alternative a -> "Alternative";
-                    case Grammar.Sequence s -> "Sequence";
-                };
+
+                String nodeText = "";
+                if( defpath.definition() instanceof Grammar.Term t ){
+                    nodeText = "Term " + Ascii.Color.Blue.foreground() + Ascii.bold + t.text() + Ascii.reset;
+                }else if( defpath.definition() instanceof Grammar.Ref rf ){
+                    nodeText = "Ref " + Ascii.italicOn + Ascii.Color.Magenta.foreground() + rf.name() + Ascii.reset;
+                }else if( defpath.definition() instanceof Grammar.Repeat rt ){
+                    nodeText = "Repeat";
+                }else if( defpath.definition() instanceof Grammar.Alternative a ){
+                    nodeText = "Alternative";
+                }else if( defpath.definition() instanceof Grammar.Sequence s ){
+                    nodeText = "Sequence";
+                }
+
                 System.out.println(
                     Ascii.Color.White.foreground() +
                         ident +

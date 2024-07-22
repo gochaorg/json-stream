@@ -28,6 +28,12 @@ public record StringToken<S extends CharPointer<S>>(
     S begin,
     S end
 ) implements Token<S> {
+    public StringToken {
+        if( value==null ) throw new IllegalArgumentException("value==null");
+        if( begin==null ) throw new IllegalArgumentException("begin==null");
+        if( end==null ) throw new IllegalArgumentException("end==null");
+    }
+
     public static class Parser<S extends CharPointer<S>> implements TokenParser<S> {
         @Override
         public Optional<StringToken<S>> parse(S ptr) {

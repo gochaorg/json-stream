@@ -56,17 +56,17 @@ Whitespace         | init   | obj   | obj.k | obj.v | arr   | arr.c
 
  */
 public sealed interface AstParser<S extends CharPointer<S>> {
-    default int getNestedLevel(){
+    default int getNestedLevel() {
         int level = 0;
         AstParser parser = this;
-        while (true){
-            if( parser instanceof AstParser.ObjectParser<?> op ){
+        while (true) {
+            if (parser instanceof AstParser.ObjectParser<?> op) {
                 parser = op.getParent();
                 level++;
-            }else if( parser instanceof AstParser.ArrayParser<?> ap ){
+            } else if (parser instanceof AstParser.ArrayParser<?> ap) {
                 parser = ap.getParent();
                 level++;
-            }else {
+            } else {
                 break;
             }
         }
@@ -118,12 +118,11 @@ public sealed interface AstParser<S extends CharPointer<S>> {
     }
 
     public static final class Init<S extends CharPointer<S>>
-    implements AstParser<S>
-    {
+        implements AstParser<S> {
         private final ParserOptions options;
 
         public Init(ParserOptions options) {
-            if( options==null ) throw new IllegalArgumentException("options==null");
+            if (options == null) throw new IllegalArgumentException("options==null");
             this.options = options;
         }
 
@@ -162,62 +161,44 @@ public sealed interface AstParser<S extends CharPointer<S>> {
         public Parsed<S> input(Token<S> token) {
             if (token == null) throw new IllegalArgumentException("token==null");
 
-            switch (token) {
-                case BigIntToken<S> n -> {
-                    return ok(this, new Ast.NumberAst.BigIntAst<>(n));
-                }
-                case LongToken<S> n -> {
-                    return ok(this, new Ast.NumberAst.LongAst<>(n));
-                }
-                case IntToken<S> n -> {
-                    return ok(this, new Ast.NumberAst.IntAst<>(n));
-                }
-                case DoubleToken<S> n -> {
-                    return ok(this, new Ast.NumberAst.DoubleAst<>(n));
-                }
-                case IdentifierToken<S> n -> {
-                    if (!options.identAtRoot()) return unexpectedStartToken(token);
-                    return ok(this, new Ast.IdentAst<>(n));
-                }
-                case StringToken<S> n -> {
-                    return ok(this, new Ast.StringAst<>(n));
-                }
-                case FalseToken<S> n -> {
-                    return ok(this, new Ast.BooleanAst.FalseAst<>(n));
-                }
-                case TrueToken<S> n -> {
-                    return ok(this, new Ast.BooleanAst.TrueAst<>(n));
-                }
-                case NullToken<S> n -> {
-                    return ok(this, new Ast.NullAst<>(n));
-                }
-                case Whitespace<S> w -> {
-                    return ok(this);
-                }
-                case SLComment<S> t -> {
-                    if (!options.singleLineComment) return unexpectedStartToken(t);
-                    comments.add(new Ast.Comment.SingleLine<>(t));
-                    return ok(this);
-                }
-                case MLComment<S> t -> {
-                    if (!options.multiLineComment) return unexpectedStartToken(t);
-                    comments.add(new Ast.Comment.MultiLine<>(t));
-                    return ok(this);
-                }
-                case Comma<S> t -> {return unexpectedStartToken(t);}
-                case Colon<S> t -> {return unexpectedStartToken(t);}
-                case CloseParentheses<S> t -> {return unexpectedStartToken(t);}
-                case CloseSquare<S> t -> {return unexpectedStartToken(t);}
-                case OpenSquare<S> t -> {return ok(new ArrayParser<>(options, this, t));}
-                case OpenParentheses<S> t -> {return ok(new ObjectParser<>(options, this, t));}
+            if (token instanceof BigIntToken<S> n) return ok(this, new Ast.NumberAst.BigIntAst<>(n));
+            if (token instanceof LongToken<S> n) return ok(this, new Ast.NumberAst.LongAst<>(n));
+            if (token instanceof IntToken<S> n) return ok(this, new Ast.NumberAst.IntAst<>(n));
+            if (token instanceof DoubleToken<S> n) return ok(this, new Ast.NumberAst.DoubleAst<>(n));
+            if (token instanceof IdentifierToken<S> n) {
+                if (!options.identAtRoot()) return unexpectedStartToken(token);
+                return ok(this, new Ast.IdentAst<>(n));
             }
+            if (token instanceof StringToken<S> n) return ok(this, new Ast.StringAst<>(n));
+            if (token instanceof FalseToken<S> n) return ok(this, new Ast.BooleanAst.FalseAst<>(n));
+            if (token instanceof TrueToken<S> n) return ok(this, new Ast.BooleanAst.TrueAst<>(n));
+            if (token instanceof NullToken<S> n) return ok(this, new Ast.NumberAst.NullAst<>(n));
+            if (token instanceof Whitespace<S> n) return ok(this);
+            if (token instanceof SLComment<S> n) {
+                if (!options.singleLineComment) return unexpectedStartToken(token);
+                comments.add(new Ast.Comment.SingleLine<>(n));
+                return ok(this);
+            }
+            if (token instanceof MLComment<S> n) {
+                if (!options.multiLineComment) return unexpectedStartToken(token);
+                comments.add(new Ast.Comment.MultiLine<>(n));
+                return ok(this);
+            }
+            if (token instanceof Comma<S> n) return unexpectedStartToken(token);
+            if (token instanceof Colon<S> n) return unexpectedStartToken(token);
+            if (token instanceof CloseParentheses<S> n) return unexpectedStartToken(token);
+            if (token instanceof CloseSquare<S> n) return unexpectedStartToken(token);
+            if (token instanceof OpenSquare<S> n) return ok(new ArrayParser<>(options, this, n));
+            if (token instanceof OpenParentheses<S> n) return ok(new ObjectParser<>(options, this, n));
+            return unexpectedStartToken(token);
         }
     }
 
     /**
      * Ошибка парснга
+     *
      * @param message сообщение
-     * @param <S> тип источника
+     * @param <S>     тип источника
      */
     public record Error<S extends CharPointer<S>>(String message) implements AstParser<S> {
         @Override
@@ -228,6 +209,7 @@ public sealed interface AstParser<S extends CharPointer<S>> {
 
     /**
      * Парсинг вложенного объекта
+     *
      * @param <S>
      */
     public static final class ObjectParser<S extends CharPointer<S>> implements AstParser<S> {
@@ -247,12 +229,14 @@ public sealed interface AstParser<S extends CharPointer<S>> {
 
         private final List<Ast.KeyValue<S>> values = new ArrayList<>();
         private Ast.Key<S> key;
-        public Ast.Key<?> getKey(){
+
+        public Ast.Key<?> getKey() {
             return key;
         }
 
         private State state = State.ExpectKey;
-        public State getState(){
+
+        public State getState() {
             return state;
         }
 
@@ -291,8 +275,8 @@ public sealed interface AstParser<S extends CharPointer<S>> {
         private List<Class<?>> afterKeyTokens() {
             List<Class<?>> tokens = new ArrayList<>();
             tokens.add(Colon.class);
-            if( options.singleLineComment )tokens.add(SLComment.class);
-            if( options.multiLineComment )tokens.add(MLComment.class);
+            if (options.singleLineComment) tokens.add(SLComment.class);
+            if (options.multiLineComment) tokens.add(MLComment.class);
             tokens.add(Whitespace.class);
             return tokens;
         }
@@ -336,205 +320,168 @@ public sealed interface AstParser<S extends CharPointer<S>> {
             if (token == null) throw new IllegalArgumentException("token==null");
             switch (state) {
                 case ExpectKey -> {
-                    switch (token) {
-                        case StringToken<S> t -> {
-                            key = new Ast.StringAst<S>(t);
-                            state = State.AfterKey;
-                            return ok(this);
-                        }
-                        case IdentifierToken<S> t -> {
-                            if (!options.identInObjectKey)
-                                return unexpectedKeyToken(t);
+                    if (token instanceof StringToken<S> t) {
+                        key = new Ast.StringAst<S>(t);
+                        state = State.AfterKey;
+                        return ok(this);
+                    } else if (token instanceof IdentifierToken<S> t) {
+                        if (!options.identInObjectKey)
+                            return unexpectedKeyToken(t);
 
-                            key = new Ast.IdentAst<S>(t);
-                            state = State.AfterKey;
-                            return ok(this);
-                        }
-                        case MLComment<S> t -> {
-                            if (!options.multiLineComment) return unexpectedKeyToken(t);
-                            comments.add(new Ast.Comment.MultiLine<>(t));
-                            return ok(this);
-                        }
-                        case SLComment<S> t -> {
-                            if (!options.singleLineComment) return unexpectedKeyToken(t);
-                            comments.add(new Ast.Comment.SingleLine<>(t));
-                            return ok(this);
-                        }
-                        case Whitespace<S> t -> {
-                            return ok(this);
-                        }
-                        case CloseParentheses<S> t -> {
-                            var res = new Ast.ObjectAst<>(
-                                ImList.of(values),
-                                begin,
-                                t
-                            );
-                            resultConsumer.accept(res);
+                        key = new Ast.IdentAst<S>(t);
+                        state = State.AfterKey;
+                        return ok(this);
+                    } else if (token instanceof MLComment<S> t) {
+                        if (!options.multiLineComment) return unexpectedKeyToken(t);
+                        comments.add(new Ast.Comment.MultiLine<>(t));
+                        return ok(this);
+                    } else if (token instanceof SLComment<S> t) {
+                        if (!options.singleLineComment) return unexpectedKeyToken(t);
+                        comments.add(new Ast.Comment.SingleLine<>(t));
+                        return ok(this);
+                    } else if (token instanceof Whitespace<S> t) {
+                        return ok(this);
+                    } else if (token instanceof CloseParentheses<S> t) {
+                        var res = new Ast.ObjectAst<>(
+                            ImList.of(values),
+                            begin,
+                            t
+                        );
+                        resultConsumer.accept(res);
 
-                            boolean nested = !(parent instanceof AstParser.Init<S>);
-                            if (nested) {
-                                if( options.returnNestedValue ) {
-                                    return ok(parent, res);
-                                }else{
-                                    return ok(parent);
-                                }
-                            }else{
+                        boolean nested = !(parent instanceof AstParser.Init<S>);
+                        if (nested) {
+                            if (options.returnNestedValue) {
                                 return ok(parent, res);
+                            } else {
+                                return ok(parent);
                             }
+                        } else {
+                            return ok(parent, res);
                         }
-                        default -> {
-                            return unexpectedKeyToken(token);
-                        }
+                    } else {
+                        return unexpectedKeyToken(token);
                     }
                 }
                 case AfterKey -> {
-                    switch (token) {
-                        case Colon<S> t -> {
-                            state = State.ExpectValue;
-                            return ok(this);
-                        }
-                        case MLComment<S> t -> {
-                            if (!options.multiLineComment) return unexpectedAfterKeyToken(t);
-                            comments.add(new Ast.Comment.MultiLine<>(t));
-                            return ok(this);
-                        }
-                        case SLComment<S> t -> {
-                            if (!options.singleLineComment) return unexpectedAfterKeyToken(t);
-                            comments.add(new Ast.Comment.SingleLine<>(t));
-                            return ok(this);
-                        }
-                        case Whitespace<S> t -> {
-                            return ok(this);
-                        }
-                        default -> {
-                            return unexpectedAfterKeyToken(token);
-                        }
+                    if (token instanceof Colon<S> t) {
+                        state = State.ExpectValue;
+                        return ok(this);
+                    } else if (token instanceof MLComment<S> t) {
+                        if (!options.multiLineComment) return unexpectedAfterKeyToken(t);
+                        comments.add(new Ast.Comment.MultiLine<>(t));
+                        return ok(this);
+                    } else if (token instanceof SLComment<S> t) {
+                        if (!options.singleLineComment) return unexpectedAfterKeyToken(t);
+                        comments.add(new Ast.Comment.SingleLine<>(t));
+                        return ok(this);
+                    } else if (token instanceof Whitespace<S> t) {
+                        return ok(this);
+                    } else {
+                        return unexpectedAfterKeyToken(token);
                     }
                 }
                 case ExpectValue -> {
-                    switch (token) {
-                        case BigIntToken<S> t -> {
-                            values.add(new Ast.KeyValue<>(key, new Ast.NumberAst.BigIntAst<>(t)));
-                            state = State.AfterValue;
-                            return ok(this);
-                        }
-                        case LongToken<S> t -> {
-                            values.add(new Ast.KeyValue<>(key, new Ast.NumberAst.LongAst<>(t)));
-                            state = State.AfterValue;
-                            return ok(this);
-                        }
-                        case IntToken<S> t -> {
-                            values.add(new Ast.KeyValue<>(key, new Ast.NumberAst.IntAst<>(t)));
-                            state = State.AfterValue;
-                            return ok(this);
-                        }
-                        case DoubleToken<S> t -> {
-                            values.add(new Ast.KeyValue<>(key, new Ast.NumberAst.DoubleAst<>(t)));
-                            state = State.AfterValue;
-                            return ok(this);
-                        }
-                        case StringToken<S> t -> {
-                            values.add(new Ast.KeyValue<>(key, new Ast.StringAst<>(t)));
-                            state = State.AfterValue;
-                            return ok(this);
-                        }
-                        case NullToken<S> t -> {
-                            values.add(new Ast.KeyValue<>(key, new Ast.NullAst<>(t)));
-                            state = State.AfterValue;
-                            return ok(this);
-                        }
-                        case TrueToken<S> t -> {
-                            values.add(new Ast.KeyValue<>(key, new Ast.BooleanAst.TrueAst<>(t)));
-                            state = State.AfterValue;
-                            return ok(this);
-                        }
-                        case FalseToken<S> t -> {
-                            values.add(new Ast.KeyValue<>(key, new Ast.BooleanAst.FalseAst<>(t)));
-                            state = State.AfterValue;
-                            return ok(this);
-                        }
-                        case IdentifierToken<S> t -> {
-                            if (!options.identInObjectValue)
-                                return unexpectedValueToken(t);
+                    if (token instanceof BigIntToken<S> t) {
+                        values.add(new Ast.KeyValue<>(key, new Ast.NumberAst.BigIntAst<>(t)));
+                        state = State.AfterValue;
+                        return ok(this);
+                    } else if (token instanceof LongToken<S> t) {
+                        values.add(new Ast.KeyValue<>(key, new Ast.NumberAst.LongAst<>(t)));
+                        state = State.AfterValue;
+                        return ok(this);
+                    } else if (token instanceof IntToken<S> t) {
+                        values.add(new Ast.KeyValue<>(key, new Ast.NumberAst.IntAst<>(t)));
+                        state = State.AfterValue;
+                        return ok(this);
+                    } else if (token instanceof DoubleToken<S> t) {
+                        values.add(new Ast.KeyValue<>(key, new Ast.NumberAst.DoubleAst<>(t)));
+                        state = State.AfterValue;
+                        return ok(this);
+                    } else if (token instanceof StringToken<S> t) {
+                        values.add(new Ast.KeyValue<>(key, new Ast.StringAst<>(t)));
+                        state = State.AfterValue;
+                        return ok(this);
+                    } else if (token instanceof NullToken<S> t) {
+                        values.add(new Ast.KeyValue<>(key, new Ast.NullAst<>(t)));
+                        state = State.AfterValue;
+                        return ok(this);
+                    } else if (token instanceof TrueToken<S> t) {
+                        values.add(new Ast.KeyValue<>(key, new Ast.BooleanAst.TrueAst<>(t)));
+                        state = State.AfterValue;
+                        return ok(this);
+                    } else if (token instanceof FalseToken<S> t) {
+                        values.add(new Ast.KeyValue<>(key, new Ast.BooleanAst.FalseAst<>(t)));
+                        state = State.AfterValue;
+                        return ok(this);
+                    } else if (token instanceof IdentifierToken<S> t) {
+                        if (!options.identInObjectValue)
+                            return unexpectedValueToken(t);
 
-                            values.add(new Ast.KeyValue<>(key, new Ast.IdentAst<>(t)));
-                            state = State.AfterValue;
-                            return ok(this);
-                        }
-                        case OpenParentheses<S> t -> {
-                            var kk = key;
-                            var obj = new ObjectParser<>(options, this, t, res -> {
-                                values.add(new Ast.KeyValue<>(kk, res));
-                            });
-                            state = State.AfterValue;
-                            return ok(obj);
-                        }
-                        case OpenSquare<S> t -> {
-                            var kk = key;
-                            var arr = new ArrayParser<>(options, this, t, res -> {
-                                values.add(new Ast.KeyValue<>(kk, res));
-                            });
-                            state = State.AfterValue;
-                            return ok(arr);
-                        }
-                        case MLComment<S> t -> {
-                            if (!options.multiLineComment) return unexpectedValueToken(t);
-                            return ok(this);
-                        }
-                        case SLComment<S> t -> {
-                            if (!options.singleLineComment) return unexpectedValueToken(t);
-                            comments.add(new Ast.Comment.SingleLine<>(t));
-                            return ok(this);
-                        }
-                        case Whitespace<S> t -> {
-                            return ok(this);
-                        }
-                        default -> {
-                            return err("!");
-                        }
+                        values.add(new Ast.KeyValue<>(key, new Ast.IdentAst<>(t)));
+                        state = State.AfterValue;
+                        return ok(this);
+                    } else if (token instanceof OpenParentheses<S> t) {
+                        var kk = key;
+                        var obj = new ObjectParser<>(options, this, t, res -> {
+                            values.add(new Ast.KeyValue<>(kk, res));
+                        });
+                        state = State.AfterValue;
+                        return ok(obj);
+                    } else if (token instanceof OpenSquare<S> t) {
+                        var kk = key;
+                        var arr = new ArrayParser<>(options, this, t, res -> {
+                            values.add(new Ast.KeyValue<>(kk, res));
+                        });
+                        state = State.AfterValue;
+                        return ok(arr);
+                    } else if (token instanceof MLComment<S> t) {
+                        if (!options.multiLineComment) return unexpectedValueToken(t);
+                        return ok(this);
+                    } else if (token instanceof SLComment<S> t) {
+                        if (!options.singleLineComment) return unexpectedValueToken(t);
+                        comments.add(new Ast.Comment.SingleLine<>(t));
+                        return ok(this);
+                    } else if (token instanceof Whitespace<S> t) {
+                        return ok(this);
+                    } else {
+                        return err("!");
                     }
                 }
                 case AfterValue -> {
-                    switch (token) {
-                        case MLComment<S> t -> {
-                            if (!options.multiLineComment) return unexpectedAfterValueToken(t);
-                            comments.add(new Ast.Comment.MultiLine<>(t));
-                            return ok(this);
-                        }
-                        case SLComment<S> t -> {
-                            if (!options.singleLineComment) return unexpectedAfterValueToken(t);
-                            comments.add(new Ast.Comment.SingleLine<>(t));
-                            return ok(this);
-                        }
-                        case Whitespace<S> t -> {
-                            return ok(this);
-                        }
-                        case CloseParentheses<S> t -> {
-                            var res = new Ast.ObjectAst<>(
-                                ImList.of(values),
-                                begin,
-                                t
-                            );
-                            resultConsumer.accept(res);
+                    if (token instanceof MLComment<S> t) {
+                        if (!options.multiLineComment) return unexpectedAfterValueToken(t);
+                        comments.add(new Ast.Comment.MultiLine<>(t));
+                        return ok(this);
+                    } else if (token instanceof SLComment<S> t) {
+                        if (!options.singleLineComment) return unexpectedAfterValueToken(t);
+                        comments.add(new Ast.Comment.SingleLine<>(t));
+                        return ok(this);
+                    } else if (token instanceof Whitespace<S> t) {
+                        return ok(this);
+                    } else if (token instanceof CloseParentheses<S> t) {
+                        var res = new Ast.ObjectAst<>(
+                            ImList.of(values),
+                            begin,
+                            t
+                        );
+                        resultConsumer.accept(res);
 
-                            boolean nested = !(parent instanceof AstParser.Init<S>);
-                            if (nested) {
-                                if( options.returnNestedValue ) {
-                                    return ok(parent, res);
-                                }else{
-                                    return ok(parent);
-                                }
-                            }else{
+                        boolean nested = !(parent instanceof AstParser.Init<S>);
+                        if (nested) {
+                            if (options.returnNestedValue) {
                                 return ok(parent, res);
+                            } else {
+                                return ok(parent);
                             }
+                        } else {
+                            return ok(parent, res);
                         }
-                        case Comma<S> t -> {
-                            state = State.ExpectKey;
-                            return ok(this);
-                        }
-                        default -> {
-                            return unexpectedAfterValueToken(token);
-                        }
+                    } else if (token instanceof Comma<S> t) {
+                        state = State.ExpectKey;
+                        return ok(this);
+                    } else {
+                        return unexpectedAfterValueToken(token);
                     }
                 }
             }
@@ -544,6 +491,7 @@ public sealed interface AstParser<S extends CharPointer<S>> {
 
     /**
      * Парсинг вложенного массива
+     *
      * @param <S>
      */
     public static final class ArrayParser<S extends CharPointer<S>> implements AstParser<S> {
@@ -556,11 +504,12 @@ public sealed interface AstParser<S extends CharPointer<S>> {
 
         public enum State {ExpectValue, AfterValue}
         private State state = State.ExpectValue;
-        public State getState(){
+
+        public State getState() {
             return state;
         }
 
-        public AstParser<S> getParent(){
+        public AstParser<S> getParent() {
             return parent;
         }
 
@@ -608,133 +557,122 @@ public sealed interface AstParser<S extends CharPointer<S>> {
 
             switch (state) {
                 case ExpectValue -> {
-                    switch (token) {
-                        case MLComment<S> t -> {
-                            if (!options.multiLineComment) return unexpectedValueToken(t);
-                            return ok(this);
-                        }
-                        case SLComment<S> t -> {
-                            if (!options.singleLineComment) return unexpectedValueToken(t);
-                            return ok(this);
-                        }
-                        case Whitespace<S> t -> {return ok(this);}
-                        case BigIntToken<S> t -> {
-                            state = State.AfterValue;
-                            values.add(new Ast.NumberAst.BigIntAst<>(t));
-                            return ok(this);
-                        }
-                        case LongToken<S> t -> {
-                            state = State.AfterValue;
-                            values.add(new Ast.NumberAst.LongAst<>(t));
-                            return ok(this);
-                        }
-                        case IntToken<S> t -> {
-                            state = State.AfterValue;
-                            values.add(new Ast.NumberAst.IntAst<>(t));
-                            return ok(this);
-                        }
-                        case DoubleToken<S> t -> {
-                            state = State.AfterValue;
-                            values.add(new Ast.NumberAst.DoubleAst<>(t));
-                            return ok(this);
-                        }
-                        case NullToken<S> t -> {
-                            state = State.AfterValue;
-                            values.add(new Ast.NullAst<>(t));
-                            return ok(this);
-                        }
-                        case FalseToken<S> t -> {
-                            state = State.AfterValue;
-                            values.add(new Ast.BooleanAst.FalseAst<>(t));
-                            return ok(this);
-                        }
-                        case TrueToken<S> t -> {
-                            state = State.AfterValue;
-                            values.add(new Ast.BooleanAst.TrueAst<>(t));
-                            return ok(this);
-                        }
-                        case StringToken<S> t -> {
-                            state = State.AfterValue;
-                            values.add(new Ast.StringAst<>(t));
-                            return ok(this);
-                        }
-                        case IdentifierToken<S> t -> {
-                            if (!options.identInArrayValue)
-                                return unexpectedValueToken(t);
+                    if (token instanceof MLComment<S> t) {
+                        if (!options.multiLineComment) return unexpectedValueToken(t);
+                        return ok(this);
+                    } else if (token instanceof SLComment<S> t) {
+                        if (!options.singleLineComment) return unexpectedValueToken(t);
+                        return ok(this);
+                    } else if (token instanceof Whitespace<S> t) {
+                        return ok(this);
+                    } else if (token instanceof BigIntToken<S> t) {
+                        state = State.AfterValue;
+                        values.add(new Ast.NumberAst.BigIntAst<>(t));
+                        return ok(this);
+                    } else if (token instanceof LongToken<S> t) {
+                        state = State.AfterValue;
+                        values.add(new Ast.NumberAst.LongAst<>(t));
+                        return ok(this);
+                    } else if (token instanceof IntToken<S> t) {
+                        state = State.AfterValue;
+                        values.add(new Ast.NumberAst.IntAst<>(t));
+                        return ok(this);
+                    } else if (token instanceof DoubleToken<S> t) {
+                        state = State.AfterValue;
+                        values.add(new Ast.NumberAst.DoubleAst<>(t));
+                        return ok(this);
+                    } else if (token instanceof NullToken<S> t) {
+                        state = State.AfterValue;
+                        values.add(new Ast.NullAst<>(t));
+                        return ok(this);
+                    } else if (token instanceof FalseToken<S> t) {
+                        state = State.AfterValue;
+                        values.add(new Ast.BooleanAst.FalseAst<>(t));
+                        return ok(this);
+                    } else if (token instanceof TrueToken<S> t) {
+                        state = State.AfterValue;
+                        values.add(new Ast.BooleanAst.TrueAst<>(t));
+                        return ok(this);
+                    } else if (token instanceof StringToken<S> t) {
+                        state = State.AfterValue;
+                        values.add(new Ast.StringAst<>(t));
+                        return ok(this);
+                    } else if (token instanceof IdentifierToken<S> t) {
+                        if (!options.identInArrayValue)
+                            return unexpectedValueToken(t);
 
-                            state = State.AfterValue;
-                            values.add(new Ast.IdentAst<>(t));
-                            return ok(this);
-                        }
-                        case OpenSquare<S> t -> {
-                            state = State.AfterValue;
-                            return ok(new ArrayParser<S>(options, this, t, values::add));
-                        }
-                        case OpenParentheses<S> t -> {
-                            state = State.AfterValue;
-                            return ok(new ObjectParser<S>(options, this, t, values::add));
-                        }
-                        case CloseSquare<S> t -> {
-                            var res = new Ast.ArrayAst<>(
-                                ImList.of(values),
-                                begin,
-                                t
-                            );
+                        state = State.AfterValue;
+                        values.add(new Ast.IdentAst<>(t));
+                        return ok(this);
+                    } else if (token instanceof OpenSquare<S> t) {
+                        state = State.AfterValue;
+                        return ok(new ArrayParser<S>(options, this, t, values::add));
+                    } else if (token instanceof OpenParentheses<S> t) {
+                        state = State.AfterValue;
+                        return ok(new ObjectParser<S>(options, this, t, values::add));
+                    } else if (token instanceof CloseSquare<S> t) {
+                        var res = new Ast.ArrayAst<>(
+                            ImList.of(values),
+                            begin,
+                            t
+                        );
 
-                            resultConsumer.accept(res);
-                            state = State.AfterValue;
+                        resultConsumer.accept(res);
+                        state = State.AfterValue;
 
-                            boolean nested = !(parent instanceof AstParser.Init<S>);
-                            if (nested) {
-                                if( options.returnNestedValue ) {
-                                    return ok(parent, res);
-                                }else{
-                                    return ok(parent);
-                                }
-                            }else{
+                        boolean nested = !(parent instanceof AstParser.Init<S>);
+                        if (nested) {
+                            if (options.returnNestedValue) {
                                 return ok(parent, res);
+                            } else {
+                                return ok(parent);
                             }
+                        } else {
+                            return ok(parent, res);
                         }
-                        case CloseParentheses<S> t -> {return err("!!");}
-                        case Colon<S> t -> {return err("!!");}
-                        case Comma<S> t -> {return err("!!");}
+                    } else if (token instanceof CloseParentheses<S> t) {
+                        return err("!!");
+                    } else if (token instanceof Colon<S> t) {
+                        return err("!!");
+                    } else if (token instanceof Comma<S> t) {
+                        return err("!!");
                     }
                 }
                 case AfterValue -> {
-                    switch (token) {
-                        case CloseSquare<S> t -> {
-                            var res = new Ast.ArrayAst<>(
-                                ImList.of(values),
-                                begin,
-                                t
-                            );
+                    if (token instanceof CloseSquare<S> t) {
+                        var res = new Ast.ArrayAst<>(
+                            ImList.of(values),
+                            begin,
+                            t
+                        );
 
-                            resultConsumer.accept(res);
-                            state = State.AfterValue;
+                        resultConsumer.accept(res);
+                        state = State.AfterValue;
 
-                            boolean nested = !(parent instanceof AstParser.Init<S>);
-                            if (nested) {
-                                if( options.returnNestedValue ) {
-                                    return ok(parent, res);
-                                }else{
-                                    return ok(parent);
-                                }
-                            }else{
+                        boolean nested = !(parent instanceof AstParser.Init<S>);
+                        if (nested) {
+                            if (options.returnNestedValue) {
                                 return ok(parent, res);
+                            } else {
+                                return ok(parent);
                             }
+                        } else {
+                            return ok(parent, res);
                         }
-                        case Comma<S> t -> {
-                            state = State.ExpectValue;
-                            return ok(this);
-                        }
-                        case MLComment<S> t -> {return ok(this);}
-                        case SLComment<S> t -> {return ok(this);}
-                        case Whitespace<S> t -> {return ok(this);}
-                        default -> {return err("!!");}
+                    } else if (token instanceof Comma<S> t) {
+                        state = State.ExpectValue;
+                        return ok(this);
+                    } else if (token instanceof MLComment<S> t) {
+                        return ok(this);
+                    } else if (token instanceof SLComment<S> t) {
+                        return ok(this);
+                    } else if (token instanceof Whitespace<S> t) {
+                        return ok(this);
+                    } else {
+                        return err("!!");
                     }
                 }
             }
-            ;
 
             return err("!!");
         }
@@ -746,7 +684,7 @@ public sealed interface AstParser<S extends CharPointer<S>> {
     public static class JsonParseError extends java.lang.Error {
         private final AstParser.Error<?> source;
 
-        public AstParser.Error<?> getSource(){ return source; }
+        public AstParser.Error<?> getSource() {return source;}
 
         public JsonParseError(AstParser.Error<?> source) {
             super(source.message());
@@ -764,23 +702,23 @@ public sealed interface AstParser<S extends CharPointer<S>> {
             return parser;
         }
 
-        public NoResult(AstParser<?> parser){
+        public NoResult(AstParser<?> parser) {
             super("no");
             this.parser = parser;
         }
     }
 
-    public static Ast<?> parse(String source){
-        if( source==null ) throw new IllegalArgumentException("source==null");
+    public static Ast<?> parse(String source) {
+        if (source == null) throw new IllegalArgumentException("source==null");
         var tokens = Tokenizer.parse(source);
 
         AstParser<StringPointer> parser = new AstParser.Init<>();
         for (var token : tokens.tokens()) {
             var res = parser.input(token);
-            if( res.parser() instanceof AstParser.Error<StringPointer> err ){
+            if (res.parser() instanceof AstParser.Error<StringPointer> err) {
                 throw new JsonParseError(err);
             }
-            if( res.result().isPresent() ){
+            if (res.result().isPresent()) {
                 return res.result().get();
             }
             parser = res.parser();

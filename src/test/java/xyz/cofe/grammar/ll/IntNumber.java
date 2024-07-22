@@ -19,19 +19,20 @@ public record IntNumber(int value) implements Expr {
 
         while (ptr < source.length() && !stop) {
             char c = source.charAt(ptr);
-            switch (state) {
-                case null -> {
-                    switch (c) {
-                        case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> {
-                            sb.append(c);
-                            state = "d";
-                            ptr += 1;
-                        }
-                        default -> {
-                            state = "error";
-                        }
+            if( state==null ){
+                switch (c) {
+                    case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> {
+                        sb.append(c);
+                        state = "d";
+                        ptr += 1;
+                    }
+                    default -> {
+                        state = "error";
                     }
                 }
+                continue;
+            }
+            switch (state) {
                 case "d" -> {
                     switch (c) {
                         case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> {

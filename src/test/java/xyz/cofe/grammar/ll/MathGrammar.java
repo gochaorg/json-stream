@@ -133,11 +133,9 @@ public class MathGrammar {
 
         @Override
         public String toString() {
-            return switch (value) {
-                case IntNumber n -> n.toString();
-                case Ident i -> i.id();
-                default -> "(" + value + ")";
-            };
+            if( value instanceof IntNumber n )return n.toString();
+            if( value instanceof Ident i )return i.id();
+            return "(" + value + ")";
         }
     }
 }

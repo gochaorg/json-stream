@@ -31,12 +31,9 @@ public record First(Rule rule, Term term) {
                         recursiveNode.defPath().definition()+
                         " "+recursivePath
                 );
-                switch (recursiveNode.defPath().definition()){
-                    case Term term when recursiveNode.offset()==0 -> {
-                        first.add(new First(recursiveNode.rule(), term));
-                    }
-                    default -> {
-                    }
+                var def = recursiveNode.defPath().definition();
+                if( def instanceof Term term && recursiveNode.offset()==0 ){
+                    first.add(new First(recursiveNode.rule(), term));
                 }
             });
         });
