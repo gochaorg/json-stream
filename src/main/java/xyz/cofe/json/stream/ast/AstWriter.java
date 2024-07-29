@@ -26,6 +26,8 @@ public class AstWriter {
             writer.write(id.token());
         } else if (ast instanceof Ast.NumberAst.BigIntAst<?> num) {
             writer.write(num.token());
+        } else if (ast instanceof Ast.NumberAst.DoubleAst<?> num) {
+            writer.write(num.token());
         } else if (ast instanceof Ast.NumberAst.LongAst<?> num) {
             writer.write(num.token());
         } else if (ast instanceof Ast.NumberAst.IntAst<?> num) {

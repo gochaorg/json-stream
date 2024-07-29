@@ -3,6 +3,7 @@ package xyz.cofe.json.stream.rec;
 import xyz.cofe.coll.im.ImList;
 import xyz.cofe.json.stream.ast.Ast;
 import xyz.cofe.json.stream.ast.AstParser;
+import xyz.cofe.json.stream.ast.AstWriter;
 import xyz.cofe.json.stream.token.DummyCharPointer;
 
 import java.lang.reflect.Array;
@@ -11,7 +12,6 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigInteger;
 import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -71,8 +71,17 @@ public class RecMapper {
         if (record instanceof String)
             return toJson((String) record);
 
+        if (record instanceof Character)
+            return toJson("" + (Character) record);
+
         if (record instanceof Integer)
             return toJson((int) (Integer) record);
+
+        if (record instanceof Byte)
+            return toJson(0xFF & ((byte) (Byte) record));
+
+        if (record instanceof Short)
+            return toJson((int) (Short) record);
 
         if (record instanceof Long)
             return toJson((long) (Long) record);
@@ -80,10 +89,18 @@ public class RecMapper {
         if (record instanceof Double)
             return toJson((double) (Double) record);
 
+        if (record instanceof Float)
+            return toJson((double) (Float) record);
+
         if (record instanceof BigInteger)
             return toJson((BigInteger) record);
 
         throw new RecMapError("can't serialize " + cls);
+    }
+
+    public String toJsonString(Object record) {
+        if (record == null) throw new IllegalArgumentException("record==null");
+        return AstWriter.toString(toJson(record));
     }
 
     protected Ast<DummyCharPointer> recordToJson(Object record, Class<?> cls) {
@@ -94,7 +111,7 @@ public class RecMapper {
                 var recValue = recCmpt.getAccessor().invoke(record);
                 if (recValue == null || (recValue instanceof Optional<?> optVal && optVal.isEmpty())) continue;
 
-                var recJsonValue = toJson(recValue);
+                var recJsonValue = toJson(recValue instanceof Optional<?> opt ? opt.get() : recValue);
                 var recJsonName = toJson(recName);
                 items = items.prepend(Ast.KeyValue.create(recJsonName, recJsonValue));
             } catch (IllegalAccessException | InvocationTargetException e) {
@@ -152,6 +169,14 @@ public class RecMapper {
         }
 
         throw new RecMapError("unsupported target type: " + type);
+    }
+
+    public <T> T fromJson(String json, Type type) {
+        if (json == null) throw new IllegalArgumentException("json==null");
+        if (type == null) throw new IllegalArgumentException("type==null");
+
+        var jsnObj = AstParser.parse(json);
+        return fromJson(jsnObj, type);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -248,36 +273,66 @@ public class RecMapper {
             } else {
                 throw new RecMapError("expect boolean in json");
             }
+        } else if (cls == Byte.class) {
+            if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Byte) (byte) intValue.value();
+            if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue)
+                return (T) (Byte) ((Double) dblValue.value()).byteValue();
+            if (ast instanceof Ast.NumberAst.LongAst<?> lngValue)
+                return (T) (Byte) ((Long) lngValue.value()).byteValue();
+            if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Byte) bigValue.value().byteValue();
+            throw new RecMapError("can't convert to short from " + ast.getClass().getSimpleName());
         } else if (cls == Short.class) {
-            if( ast instanceof Ast.NumberAst.IntAst<?> intValue ) return (T) (Short) (short)intValue.value();
-            if( ast instanceof Ast.NumberAst.DoubleAst<?> dblValue ) return (T) (Short) ((Double) dblValue.value()).shortValue();
-            if( ast instanceof Ast.NumberAst.LongAst<?> lngValue ) return (T) (Short) ((Long) lngValue.value()).shortValue();
-            if( ast instanceof Ast.NumberAst.BigIntAst<?> bigValue ) return (T) (Short) bigValue.value().shortValue();
+            if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Short) (short) intValue.value();
+            if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue)
+                return (T) (Short) ((Double) dblValue.value()).shortValue();
+            if (ast instanceof Ast.NumberAst.LongAst<?> lngValue)
+                return (T) (Short) ((Long) lngValue.value()).shortValue();
+            if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Short) bigValue.value().shortValue();
             throw new RecMapError("can't convert to short from " + ast.getClass().getSimpleName());
         } else if (cls == Integer.class) {
-            if( ast instanceof Ast.NumberAst.IntAst<?> intValue ) return (T) (Integer) intValue.value();
-            if( ast instanceof Ast.NumberAst.DoubleAst<?> dblValue ) return (T) (Integer) ((Double) dblValue.value()).intValue();
-            if( ast instanceof Ast.NumberAst.LongAst<?> lngValue ) return (T) (Integer) ((Long) lngValue.value()).intValue();
-            if( ast instanceof Ast.NumberAst.BigIntAst<?> bigValue ) return (T) (Integer) bigValue.value().intValue();
+            if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Integer) intValue.value();
+            if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue)
+                return (T) (Integer) ((Double) dblValue.value()).intValue();
+            if (ast instanceof Ast.NumberAst.LongAst<?> lngValue)
+                return (T) (Integer) ((Long) lngValue.value()).intValue();
+            if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Integer) bigValue.value().intValue();
             throw new RecMapError("can't convert to int from " + ast.getClass().getSimpleName());
         } else if (cls == Long.class) {
-            if( ast instanceof Ast.NumberAst.IntAst<?> intValue ) return (T) (Long) (long) intValue.value();
-            if( ast instanceof Ast.NumberAst.DoubleAst<?> dblValue ) return (T) (Long) ((Double) dblValue.value()).longValue();
-            if( ast instanceof Ast.NumberAst.LongAst<?> lngValue ) return (T) (Long) lngValue.value();
-            if( ast instanceof Ast.NumberAst.BigIntAst<?> bigValue ) return (T) (Long) bigValue.value().longValue();
+            if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Long) (long) intValue.value();
+            if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue)
+                return (T) (Long) ((Double) dblValue.value()).longValue();
+            if (ast instanceof Ast.NumberAst.LongAst<?> lngValue) return (T) (Long) lngValue.value();
+            if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Long) bigValue.value().longValue();
             throw new RecMapError("can't convert to long from " + ast.getClass().getSimpleName());
         } else if (cls == BigInteger.class) {
-            if( ast instanceof Ast.NumberAst.IntAst<?> intValue ) return (T) BigInteger.valueOf(intValue.value());
-            if( ast instanceof Ast.NumberAst.DoubleAst<?> dblValue ) return (T) BigInteger.valueOf(((long) dblValue.value()));
-            if( ast instanceof Ast.NumberAst.LongAst<?> lngValue ) return (T) BigInteger.valueOf(lngValue.value());
-            if( ast instanceof Ast.NumberAst.BigIntAst<?> bigValue ) return (T) bigValue.value();
+            if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) BigInteger.valueOf(intValue.value());
+            if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue)
+                return (T) BigInteger.valueOf(((long) dblValue.value()));
+            if (ast instanceof Ast.NumberAst.LongAst<?> lngValue) return (T) BigInteger.valueOf(lngValue.value());
+            if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) bigValue.value();
             throw new RecMapError("can't convert to BigInteger from " + ast.getClass().getSimpleName());
-        } else if (cls == Double.class) {
-            if( ast instanceof Ast.NumberAst.IntAst<?> intValue ) return (T) (Double) (double) intValue.value();
-            if( ast instanceof Ast.NumberAst.DoubleAst<?> dblValue ) return (T) (Double) dblValue.value();
-            if( ast instanceof Ast.NumberAst.LongAst<?> lngValue ) return (T) (Double) ((Long) lngValue.value()).doubleValue();
-            if( ast instanceof Ast.NumberAst.BigIntAst<?> bigValue ) return (T) (Double) bigValue.value().doubleValue();
+        } else if (cls == Float.class) {
+            if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Float) (float) intValue.value();
+            if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue) return (T) (Float) (float) dblValue.value();
+            if (ast instanceof Ast.NumberAst.LongAst<?> lngValue)
+                return (T) (Float) ((Long) lngValue.value()).floatValue();
+            if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Float) bigValue.value().floatValue();
             throw new RecMapError("can't convert to double from " + ast.getClass().getSimpleName());
+        } else if (cls == Double.class) {
+            if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Double) (double) intValue.value();
+            if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue) return (T) (Double) dblValue.value();
+            if (ast instanceof Ast.NumberAst.LongAst<?> lngValue)
+                return (T) (Double) ((Long) lngValue.value()).doubleValue();
+            if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Double) bigValue.value().doubleValue();
+            throw new RecMapError("can't convert to double from " + ast.getClass().getSimpleName());
+        } else if (cls == Character.class) {
+            if (ast instanceof Ast.StringAst<?> strValue) {
+                if (strValue.value().isEmpty())
+                    throw new RecMapError("can't convert to char empty string");
+
+                return (T) (Character) strValue.value().charAt(0);
+            }
+            throw new RecMapError("can't convert to char from " + ast.getClass().getSimpleName());
         } else if (cls.isSealed() && cls.isInterface()) {
             return fromJsonToSealedInterface(ast, cls);
         }
