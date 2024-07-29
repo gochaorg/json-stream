@@ -17,40 +17,56 @@ import java.util.Optional;
 import java.util.function.Function;
 
 public class RecMapper {
-    public Ast.StringAst<DummyCharPointer> toJson(String value) {
+    public Ast.StringAst<DummyCharPointer> toAst(String value) {
         return Ast.StringAst.create(value);
     }
 
-    public Ast.NumberAst.IntAst<DummyCharPointer> toJson(int value) {
+    public Ast.StringAst<DummyCharPointer> toAst(char value){
+        return Ast.StringAst.create(""+value);
+    }
+
+    public Ast.NumberAst.IntAst<DummyCharPointer> toAst(byte value) {
+        return Ast.NumberAst.IntAst.create(0xFF & value);
+    }
+
+    public Ast.NumberAst.IntAst<DummyCharPointer> toAst(short value) {
         return Ast.NumberAst.IntAst.create(value);
     }
 
-    public Ast.NumberAst.LongAst<DummyCharPointer> toJson(long value) {
+    public Ast.NumberAst.IntAst<DummyCharPointer> toAst(int value) {
+        return Ast.NumberAst.IntAst.create(value);
+    }
+
+    public Ast.NumberAst.LongAst<DummyCharPointer> toAst(long value) {
         return Ast.NumberAst.LongAst.create(value);
     }
 
-    public Ast.NumberAst.BigIntAst<DummyCharPointer> toJson(BigInteger value) {
+    public Ast.NumberAst.BigIntAst<DummyCharPointer> toAst(BigInteger value) {
         return Ast.NumberAst.BigIntAst.create(value);
     }
 
-    public Ast.NumberAst.DoubleAst<DummyCharPointer> toJson(double value) {
+    public Ast.NumberAst.DoubleAst<DummyCharPointer> toAst(float value) {
         return Ast.NumberAst.DoubleAst.create(value);
     }
 
-    public Ast.BooleanAst<DummyCharPointer> toJson(boolean value) {
+    public Ast.NumberAst.DoubleAst<DummyCharPointer> toAst(double value) {
+        return Ast.NumberAst.DoubleAst.create(value);
+    }
+
+    public Ast.BooleanAst<DummyCharPointer> toAst(boolean value) {
         return Ast.NumberAst.BooleanAst.create(value);
     }
 
-    public Ast.NullAst<DummyCharPointer> nullToJson() {
+    public Ast.NullAst<DummyCharPointer> nullToAst() {
         return Ast.NumberAst.NullAst.create();
     }
 
-    public Ast.IdentAst<DummyCharPointer> identToJson(String value) {
+    public Ast.IdentAst<DummyCharPointer> identToAst(String value) {
         return Ast.NumberAst.IdentAst.create(value);
     }
 
-    public Ast<DummyCharPointer> toJson(Object record) {
-        if (record == null) return nullToJson();
+    public Ast<DummyCharPointer> toAst(Object record) {
+        if (record == null) return nullToAst();
 
         Class<?> cls = record.getClass();
         if (cls.isRecord()) {
@@ -66,41 +82,41 @@ public class RecMapper {
         if (cls.isEnum()) return enumToJson(record);
 
         if (record instanceof Boolean)
-            return toJson((boolean) (Boolean) record);
+            return toAst((boolean) (Boolean) record);
 
         if (record instanceof String)
-            return toJson((String) record);
+            return toAst((String) record);
 
         if (record instanceof Character)
-            return toJson("" + (Character) record);
+            return toAst("" + (Character) record);
 
         if (record instanceof Integer)
-            return toJson((int) (Integer) record);
+            return toAst((int) (Integer) record);
 
         if (record instanceof Byte)
-            return toJson(0xFF & ((byte) (Byte) record));
+            return toAst(0xFF & ((byte) (Byte) record));
 
         if (record instanceof Short)
-            return toJson((int) (Short) record);
+            return toAst((int) (Short) record);
 
         if (record instanceof Long)
-            return toJson((long) (Long) record);
+            return toAst((long) (Long) record);
 
         if (record instanceof Double)
-            return toJson((double) (Double) record);
+            return toAst((double) (Double) record);
 
         if (record instanceof Float)
-            return toJson((double) (Float) record);
+            return toAst((double) (Float) record);
 
         if (record instanceof BigInteger)
-            return toJson((BigInteger) record);
+            return toAst((BigInteger) record);
 
         throw new RecMapError("can't serialize " + cls);
     }
 
-    public String toJsonString(Object record) {
+    public String toJson(Object record) {
         if (record == null) throw new IllegalArgumentException("record==null");
-        return AstWriter.toString(toJson(record));
+        return AstWriter.toString(toAst(record));
     }
 
     protected Ast<DummyCharPointer> recordToJson(Object record, Class<?> cls) {
@@ -111,8 +127,8 @@ public class RecMapper {
                 var recValue = recCmpt.getAccessor().invoke(record);
                 if (recValue == null || (recValue instanceof Optional<?> optVal && optVal.isEmpty())) continue;
 
-                var recJsonValue = toJson(recValue instanceof Optional<?> opt ? opt.get() : recValue);
-                var recJsonName = toJson(recName);
+                var recJsonValue = toAst(recValue instanceof Optional<?> opt ? opt.get() : recValue);
+                var recJsonName = toAst(recName);
                 items = items.prepend(Ast.KeyValue.create(recJsonName, recJsonValue));
             } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new RecMapError("can't read record component " + recName, e);
@@ -124,7 +140,7 @@ public class RecMapper {
         var itfs = Arrays.stream(cls.getInterfaces()).filter(Class::isSealed).toList();
         if (itfs.size() == 1) {
             var name = cls.getSimpleName();
-            return Ast.ObjectAst.create(ImList.of(Ast.KeyValue.create(toJson(name), body)));
+            return Ast.ObjectAst.create(ImList.of(Ast.KeyValue.create(toAst(name), body)));
         } else {
             return body;
         }
@@ -133,7 +149,7 @@ public class RecMapper {
     protected Ast<DummyCharPointer> iterableToJson(Iterable<?> iterable) {
         ImList<Ast<DummyCharPointer>> lst = ImList.of();
         for (var it : iterable) {
-            var a = toJson(it);
+            var a = toAst(it);
             lst = lst.prepend(a);
         }
         return Ast.ArrayAst.create(lst.reverse());
@@ -144,7 +160,7 @@ public class RecMapper {
         var arrLen = Array.getLength(array);
         for (var ai = 0; ai < arrLen; ai++) {
             lst = lst.prepend(
-                toJson(Array.get(array, ai))
+                toAst(Array.get(array, ai))
             );
         }
         return Ast.ArrayAst.create(lst.reverse());
@@ -156,11 +172,11 @@ public class RecMapper {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T fromJson(Ast<?> ast, Type type) {
+    public <T> T parse(Ast<?> ast, Type type) {
         if (ast == null) throw new IllegalArgumentException("ast==null");
         if (type == null) throw new IllegalArgumentException("type==null");
         if (type instanceof Class<?> cls) {
-            return (T) fromJson(ast, cls);
+            return (T) parse(ast, cls);
         }
 
         var parser = parserOf(type);
@@ -171,19 +187,19 @@ public class RecMapper {
         throw new RecMapError("unsupported target type: " + type);
     }
 
-    public <T> T fromJson(String json, Type type) {
+    public <T> T parse(String json, Type type) {
         if (json == null) throw new IllegalArgumentException("json==null");
         if (type == null) throw new IllegalArgumentException("type==null");
 
         var jsnObj = AstParser.parse(json);
-        return fromJson(jsnObj, type);
+        return parse(jsnObj, type);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected <T> Optional<Function<Ast<?>, T>> parserOf(Type type) {
         if (type instanceof Class<?> cls) {
             return
-                Optional.of((Ast<?> ast) -> (T) fromJson(ast, cls));
+                Optional.of((Ast<?> ast) -> (T) parse(ast, cls));
         }
 
         if (type instanceof ParameterizedType pt) {
@@ -253,7 +269,7 @@ public class RecMapper {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T fromJson(Ast<?> ast, Class<T> cls) {
+    public <T> T parse(Ast<?> ast, Class<T> cls) {
         if (ast == null) throw new IllegalArgumentException("ast==null");
         if (cls == null) throw new IllegalArgumentException("cls==null");
 
@@ -388,7 +404,7 @@ public class RecMapper {
             }
 
             if (valueAstOpt.isEmpty()) throw new RecMapError("expect field " + name + " in json");
-            recValues[ri] = fromJson(valueAstOpt.get(), recType);
+            recValues[ri] = parse(valueAstOpt.get(), recType);
         }
 
         try {
