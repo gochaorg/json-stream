@@ -21,8 +21,8 @@ public class RecMapper {
         return Ast.StringAst.create(value);
     }
 
-    public Ast.StringAst<DummyCharPointer> toAst(char value){
-        return Ast.StringAst.create(""+value);
+    public Ast.StringAst<DummyCharPointer> toAst(char value) {
+        return Ast.StringAst.create("" + value);
     }
 
     public Ast.NumberAst.IntAst<DummyCharPointer> toAst(byte value) {
@@ -350,6 +350,8 @@ public class RecMapper {
             throw new RecMapError("can't convert to char from " + ast.getClass().getSimpleName());
         } else if (cls.isSealed() && cls.isInterface()) {
             return fromJsonToSealedInterface(ast, cls);
+        } else if (cls.isEnum()) {
+            return fromJsonOfEnum(ast, cls);
         }
 
         throw new RecMapError("unsupported " + cls);
@@ -413,5 +415,18 @@ public class RecMapper {
                  InvocationTargetException e) {
             throw new RecMapError("can't create instance of " + recordClass, e);
         }
+    }
+
+    protected <T> T fromJsonOfEnum(Ast<?> ast, Class<T> enumCls) {
+        if (ast instanceof Ast.StringAst<?> strAst) {
+            var enumConsts = enumCls.getEnumConstants();
+            for (var enumConst : enumConsts) {
+                if (strAst.value().equals(((Enum<?>) enumConst).name())) {
+                    return enumConst;
+                }
+            }
+            throw new RecMapError("can't convert to enum (" + enumCls + ") from \"" + strAst.value() + "\", expect " + Arrays.stream(enumConsts).map(e -> ((Enum<?>) e).name()).reduce("", (sum, it) -> sum.isBlank() ? it : sum + ", " + it));
+        }
+        throw new RecMapError("can't convert to enum (" + enumCls + ") from " + ast.getClass().getSimpleName());
     }
 }
