@@ -107,7 +107,7 @@ public record StaticMethodParser(
             if (parsers.size() == 0) {
                 return Result.error("unsupported param type " + pc + ", not found lexem or non-term node");
             } else {
-                return Result.ok(new Param.RuleRef(pc, ImList.of(parsers)));
+                return Result.ok(new Param.RuleRef(pc, ImList.from(parsers)));
             }
         }
     }

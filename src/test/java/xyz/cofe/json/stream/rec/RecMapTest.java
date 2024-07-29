@@ -158,4 +158,23 @@ public class RecMapTest {
         Character char_dst = mapper.parse(char_str, Character.class);
         assertTrue(Objects.equals(char_dst,char_src));
     }
+
+    public static enum EnumTest {
+        A, B, C;
+    }
+
+    @Test
+    public void enumTest(){
+        RecMapper mapper = new RecMapper();
+
+        var src = EnumTest.A;
+
+        var jsonString = mapper.toJson(src);
+        System.out.println(jsonString);
+
+        EnumTest dst = mapper.parse(jsonString, EnumTest.class);
+        System.out.println(dst);
+
+        assertTrue(Objects.equals(src,dst));
+    }
 }

@@ -83,7 +83,7 @@ public class SomeParsers {
         if (nonTermTypes != null) return nonTermTypes;
         synchronized (this) {
             if (nonTermTypes != null) return nonTermTypes;
-            nonTermTypes = ImList.of(getByNode().keySet());
+            nonTermTypes = ImList.from(getByNode().keySet());
             return nonTermTypes;
         }
     }

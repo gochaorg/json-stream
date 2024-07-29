@@ -101,7 +101,7 @@ public record RecursiveRef(ImList<RecursiveNode> revPath) {
         var removeSet = getInvalidPaths(cycles);
         cycles.removeAll(removeSet);
 
-        var result = ImList.of(cycles);
+        var result = ImList.from(cycles);
         cache.put(grammar, result);
 
         return result;

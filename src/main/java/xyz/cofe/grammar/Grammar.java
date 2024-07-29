@@ -1,6 +1,6 @@
 package xyz.cofe.grammar;
 
-import xyz.cofe.coll.im.HTree;
+import xyz.cofe.coll.im.htree.HTree;
 import xyz.cofe.coll.im.ImList;
 import xyz.cofe.coll.im.htree.Nest;
 import xyz.cofe.grammar.impl.Visit;
@@ -25,7 +25,7 @@ public record Grammar(
     public ImList<Rule> rule(String name){
         if( name==null ) throw new IllegalArgumentException("name==null");
         var lst = DuplicateRuleName.ruleMapOf(this).get(name);
-        return lst==null ? ImList.of() : ImList.of(lst);
+        return lst==null ? ImList.of() : ImList.from(lst);
     }
 
     /**
@@ -164,7 +164,7 @@ public record Grammar(
                     lst.add(path.definition());
                 });
 
-                var imList = ImList.of(lst);
+                var imList = ImList.from(lst);
                 Visit.nestedCache.put(root,imList);
 
                 return imList;
@@ -182,7 +182,7 @@ public record Grammar(
                 var lst = new ArrayList<DefPath>();
                 root.visit(lst::add);
 
-                var imList = ImList.of(lst);
+                var imList = ImList.from(lst);
                 Visit.nestedPathCache.put(root,imList);
 
                 return imList;

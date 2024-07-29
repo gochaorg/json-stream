@@ -31,6 +31,6 @@ public record BrokenRef(Grammar.Rule rule, Grammar.Ref ref) {
             }
         });
 
-        return ImList.of(res);
+        return ImList.from(res);
     }
 }

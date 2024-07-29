@@ -149,7 +149,7 @@ public class RecursiveVisitor {
                     )
                 );
 
-            var follow = ImList.of(List.of(follow1));
+            var follow = ImList.from(List.of(follow1));
 
             debugShowFollow(follow, headNode);
 

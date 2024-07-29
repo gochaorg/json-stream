@@ -343,7 +343,7 @@ public sealed interface AstParser<S extends CharPointer<S>> {
                         return ok(this);
                     } else if (token instanceof CloseParentheses<S> t) {
                         var res = new Ast.ObjectAst<>(
-                            ImList.of(values),
+                            ImList.from(values),
                             begin,
                             t
                         );
@@ -461,7 +461,7 @@ public sealed interface AstParser<S extends CharPointer<S>> {
                         return ok(this);
                     } else if (token instanceof CloseParentheses<S> t) {
                         var res = new Ast.ObjectAst<>(
-                            ImList.of(values),
+                            ImList.from(values),
                             begin,
                             t
                         );
@@ -612,7 +612,7 @@ public sealed interface AstParser<S extends CharPointer<S>> {
                         return ok(new ObjectParser<S>(options, this, t, values::add));
                     } else if (token instanceof CloseSquare<S> t) {
                         var res = new Ast.ArrayAst<>(
-                            ImList.of(values),
+                            ImList.from(values),
                             begin,
                             t
                         );
@@ -641,7 +641,7 @@ public sealed interface AstParser<S extends CharPointer<S>> {
                 case AfterValue -> {
                     if (token instanceof CloseSquare<S> t) {
                         var res = new Ast.ArrayAst<>(
-                            ImList.of(values),
+                            ImList.from(values),
                             begin,
                             t
                         );

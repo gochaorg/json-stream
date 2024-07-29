@@ -36,7 +36,7 @@ public record DuplicateRuleName(Grammar.Rule rule) {
         });
 
         var m2 = new HashMap<String,ImList<Grammar.Rule>>();
-        m.forEach( (n,l) -> m2.put(n, ImList.of(l)) );
+        m.forEach( (n,l) -> m2.put(n, ImList.from(l)) );
 
         ruleMap.put(grammar, m2);
         return m2;

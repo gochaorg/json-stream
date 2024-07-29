@@ -30,7 +30,7 @@ public class AstParser {
 
         var lst = parsers.toList();
         lst.sort(Comparator.comparingInt(a -> a.resultMapper().rule().order()));
-        this.parsers = ImList.of(lst);
+        this.parsers = ImList.from(lst);
     }
 
     private Map<Type, ImList<ValidatedParser>> parsersByResult;
@@ -52,7 +52,7 @@ public class AstParser {
                 var psLst = ps.toList();
                 psLst.sort(
                     Comparator.comparingInt(a -> a.resultMapper().rule().order()));
-                return ImList.of(psLst);
+                return ImList.from(psLst);
             });
 
             parsersByResult = m;

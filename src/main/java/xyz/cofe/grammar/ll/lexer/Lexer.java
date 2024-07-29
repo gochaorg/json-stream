@@ -86,18 +86,20 @@ public class Lexer {
         if( tokenTypes!=null )return tokenTypes;
         synchronized (this) {
             if (tokenTypes != null) return tokenTypes;
-            tokenTypes = ImList.of(tokenParsersByType().keySet());
+            tokenTypes = ImList.from(tokenParsersByType().keySet());
             return tokenTypes;
         }
     }
 
     private ImList<Type> visibleTokenTypes;
+
+    @SuppressWarnings("Convert2MethodRef")
     public ImList<Type> visibleTokenTypes(){
         if( visibleTokenTypes!=null )return visibleTokenTypes;
         synchronized (this) {
             if (visibleTokenTypes != null) return visibleTokenTypes;
             visibleTokenTypes =
-                ImList.of(tokenParsersByType().entrySet())
+                ImList.from(tokenParsersByType().entrySet())
                     .map( e ->
                         Tuple2.of(
                             e.getKey(),
@@ -233,7 +235,7 @@ public class Lexer {
             return ia.compareTo(ib);
         });
 
-        return new Lexer(ImList.of(tokenParsers));
+        return new Lexer(ImList.from(tokenParsers));
     }
 
     public ImList<Matched<?>> parse(String source, int offset) {

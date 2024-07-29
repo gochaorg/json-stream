@@ -158,6 +158,6 @@ public class GrammarBuilder {
 
     public Grammar build() {
         if (rules.isEmpty()) throw new IllegalStateException("no rules");
-        return new Grammar(ImList.of(rules));
+        return new Grammar(ImList.from(rules));
     }
 }

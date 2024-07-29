@@ -9,7 +9,7 @@ public class Tokenizer<S extends CharPointer<S>> {
 
     public Tokenizer(Iterable<TokenParser<S>> parsers) {
         if (parsers == null) throw new IllegalArgumentException("parsers==null");
-        this.parsers = ImList.of(parsers);
+        this.parsers = ImList.from(parsers);
     }
 
     @SafeVarargs

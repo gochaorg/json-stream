@@ -70,16 +70,16 @@ public class RecMapper {
 
         Class<?> cls = record.getClass();
         if (cls.isRecord()) {
-            return recordToJson(record, cls);
+            return recordToAst(record, cls);
         }
 
         if (record instanceof Iterable<?> iter) {
-            return iterableToJson(iter);
+            return iterableToAst(iter);
         }
 
-        if (cls.isArray()) return arrayToJson(record);
+        if (cls.isArray()) return arrayToAst(record);
 
-        if (cls.isEnum()) return enumToJson(record);
+        if (cls.isEnum()) return enumToAst((Enum<?>) record);
 
         if (record instanceof Boolean)
             return toAst((boolean) (Boolean) record);
@@ -119,7 +119,7 @@ public class RecMapper {
         return AstWriter.toString(toAst(record));
     }
 
-    protected Ast<DummyCharPointer> recordToJson(Object record, Class<?> cls) {
+    protected Ast<DummyCharPointer> recordToAst(Object record, Class<?> cls) {
         var items = ImList.<Ast.KeyValue<DummyCharPointer>>of();
         for (var recCmpt : cls.getRecordComponents()) {
             var recName = recCmpt.getName();
@@ -146,7 +146,7 @@ public class RecMapper {
         }
     }
 
-    protected Ast<DummyCharPointer> iterableToJson(Iterable<?> iterable) {
+    protected Ast<DummyCharPointer> iterableToAst(Iterable<?> iterable) {
         ImList<Ast<DummyCharPointer>> lst = ImList.of();
         for (var it : iterable) {
             var a = toAst(it);
@@ -155,7 +155,7 @@ public class RecMapper {
         return Ast.ArrayAst.create(lst.reverse());
     }
 
-    protected Ast<DummyCharPointer> arrayToJson(Object array) {
+    protected Ast<DummyCharPointer> arrayToAst(Object array) {
         ImList<Ast<DummyCharPointer>> lst = ImList.of();
         var arrLen = Array.getLength(array);
         for (var ai = 0; ai < arrLen; ai++) {
@@ -166,9 +166,8 @@ public class RecMapper {
         return Ast.ArrayAst.create(lst.reverse());
     }
 
-    protected Ast<DummyCharPointer> enumToJson(Object value) {
-        value.getClass().getEnumConstants();
-        throw new RecMapError("!! enum");
+    protected Ast<DummyCharPointer> enumToAst(Enum<?> value) {
+        return Ast.StringAst.create(value.name());
     }
 
     @SuppressWarnings("unchecked")

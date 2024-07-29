@@ -53,7 +53,7 @@ public class Tokenizer {
         }
 
         // check overlap or hole
-        var overlapHoles = ImList.of(intermediate).zip(ImList.of(intermediate).skip(1))
+        var overlapHoles = ImList.from(intermediate).zip(ImList.from(intermediate).skip(1))
             .foldLeft(
                 Tuple2.of(0,0),
                 (acc,it) -> {
@@ -70,6 +70,6 @@ public class Tokenizer {
         if( overlap<0 ) System.err.println("overlap "+ Math.abs(overlap));
         if( holes<0 ) System.err.println("holes "+ Math.abs(holes));
 
-        return ImList.of(result);
+        return ImList.from(result);
     }
 }

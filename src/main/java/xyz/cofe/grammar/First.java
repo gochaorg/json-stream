@@ -38,7 +38,7 @@ public record First(Rule rule, Term term) {
             });
         });
 
-        ImList<First> result = ImList.of(first);
+        ImList<First> result = ImList.from(first);
         cache.computeIfAbsent(grammar, ignore -> new WeakHashMap<>()).put(rule, result);
 
         return result;
