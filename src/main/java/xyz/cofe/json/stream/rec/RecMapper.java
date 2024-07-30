@@ -119,6 +119,11 @@ public class RecMapper {
         return AstWriter.toString(toAst(record));
     }
 
+    private SubClassWriter subClassWriter;
+    {
+        subClassWriter = SubClassWriter.defaultWriter(this);
+    }
+
     protected Ast<DummyCharPointer> recordToAst(Object record, Class<?> cls) {
         var items = ImList.<Ast.KeyValue<DummyCharPointer>>of();
         for (var recCmpt : cls.getRecordComponents()) {
@@ -137,13 +142,7 @@ public class RecMapper {
 
         var body = Ast.ObjectAst.create(items.reverse());
 
-        var itfs = Arrays.stream(cls.getInterfaces()).filter(Class::isSealed).toList();
-        if (itfs.size() == 1) {
-            var name = cls.getSimpleName();
-            return Ast.ObjectAst.create(ImList.of(Ast.KeyValue.create(toAst(name), body)));
-        } else {
-            return body;
-        }
+        return subClassWriter.write(body,record);
     }
 
     protected Ast<DummyCharPointer> iterableToAst(Iterable<?> iterable) {
@@ -259,7 +258,7 @@ public class RecMapper {
         return ast.values().map(itemParse::apply).toList();
     }
 
-    protected <T> Optional<T> optionalParse(Ast<?> ast, Function<Ast<?>, T> itemParse) {
+    private  <T> Optional<T> optionalParse(Ast<?> ast, Function<Ast<?>, T> itemParse) {
         if (ast instanceof Ast.NullAst<?> nullAst) {
             return Optional.empty();
         }
@@ -349,34 +348,33 @@ public class RecMapper {
             }
             throw new RecMapError("can't convert to char from " + ast.getClass().getSimpleName());
         } else if (cls.isSealed() && cls.isInterface()) {
-            return fromJsonToSealedInterface(ast, cls);
+            return parseSealedInterface(ast, cls);
         } else if (cls.isEnum()) {
-            return fromJsonOfEnum(ast, cls);
+            return parseEnum(ast, cls);
         }
 
         throw new RecMapError("unsupported " + cls);
     }
 
-    @SuppressWarnings("unchecked")
-    protected <T> T fromJsonToSealedInterface(Ast<?> ast, Class<T> cls) {
-        if (ast instanceof Ast.ObjectAst<?> objAst) {
-            var subClasses = cls.getPermittedSubclasses();
-            for (var subCls : subClasses) {
-                var bodyOpt = objAst.get(subCls.getSimpleName());
-                if (bodyOpt.isPresent()) {
-                    return (T) fromJsonBodyOfSubclass(bodyOpt.get(), subCls);
-                }
-            }
-            throw new RecMapError("subClass not found, expect follow keys: " + Arrays.stream(subClasses).map(Class::getSimpleName).toList());
-        } else {
-            throw new RecMapError("expect Ast.ObjectAst");
-        }
+    private SubClassResolver subClassResolver;
+    {
+        subClassResolver = SubClassResolver.defaultResolver();
     }
 
-    protected <T> T fromJsonBodyOfSubclass(Ast<?> ast, Class<T> subClass) {
+    @SuppressWarnings("unchecked")
+    protected <T> T parseSealedInterface(Ast<?> ast, Class<T> cls) {
+        return subClassResolver.resolve(ast,cls.getPermittedSubclasses()).fold(
+            resolved -> (T) parseSubclass(resolved.body(), resolved.klass()),
+            err -> {
+                throw new RecMapError(err);
+            }
+        );
+    }
+
+    protected <T> T parseSubclass(Ast<?> ast, Class<T> subClass) {
         if (ast instanceof Ast.ObjectAst<?> objAst) {
             if (subClass.isRecord()) {
-                return fromJsonBodyOfRecord(objAst, subClass);
+                return parseRecord(objAst, subClass);
             } else {
                 throw new RecMapError("expect " + subClass + " is record");
             }
@@ -385,7 +383,7 @@ public class RecMapper {
         }
     }
 
-    protected <T> T fromJsonBodyOfRecord(Ast.ObjectAst<?> objAst, Class<T> recordClass) {
+    protected <T> T parseRecord(Ast.ObjectAst<?> objAst, Class<T> recordClass) {
         var recComponents = recordClass.getRecordComponents();
         var recComponentClasses = new Class<?>[recComponents.length];
         var recValues = new Object[recComponents.length];
@@ -417,7 +415,7 @@ public class RecMapper {
         }
     }
 
-    protected <T> T fromJsonOfEnum(Ast<?> ast, Class<T> enumCls) {
+    protected <T> T parseEnum(Ast<?> ast, Class<T> enumCls) {
         if (ast instanceof Ast.StringAst<?> strAst) {
             var enumConsts = enumCls.getEnumConstants();
             for (var enumConst : enumConsts) {
