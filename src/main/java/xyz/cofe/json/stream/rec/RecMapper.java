@@ -17,6 +17,47 @@ import java.util.Optional;
 import java.util.function.Function;
 
 public class RecMapper {
+    //region subClassWriter : SubClassWriter
+    private SubClassWriter subClassWriter;
+
+    {
+        subClassWriter = SubClassWriter.defaultWriter;
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    public SubClassWriter subClassWriter() {
+        return subClassWriter;
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    public RecMapper subClassWriter(SubClassWriter subClassWriter) {
+        if (subClassWriter == null) throw new IllegalArgumentException("subClassWriter==null");
+        this.subClassWriter = subClassWriter;
+        return this;
+    }
+    //endregion
+
+    //region subClassResolver : SubClassResolver
+    private SubClassResolver subClassResolver;
+
+    {
+        subClassResolver = SubClassResolver.defaultResolver();
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    public SubClassResolver subClassResolver() {
+        return subClassResolver;
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    public RecMapper subClassResolver(SubClassResolver subClassResolver) {
+        if (subClassResolver == null) throw new IllegalArgumentException("subClassResolver==null");
+        this.subClassResolver = subClassResolver;
+        return this;
+    }
+    //endregion
+
+    //region toAst() primitives
     public Ast.StringAst<DummyCharPointer> toAst(String value) {
         return Ast.StringAst.create(value);
     }
@@ -64,7 +105,15 @@ public class RecMapper {
     public Ast.IdentAst<DummyCharPointer> identToAst(String value) {
         return Ast.NumberAst.IdentAst.create(value);
     }
+    //endregion
 
+    //region enumToAst()
+    private Ast<DummyCharPointer> enumToAst(Enum<?> value) {
+        return Ast.StringAst.create(value.name());
+    }
+    //endregion
+
+    //region toAst() containers
     public Ast<DummyCharPointer> toAst(Object record) {
         if (record == null) return nullToAst();
 
@@ -119,12 +168,7 @@ public class RecMapper {
         return AstWriter.toString(toAst(record));
     }
 
-    private SubClassWriter subClassWriter;
-    {
-        subClassWriter = SubClassWriter.defaultWriter(this);
-    }
-
-    protected Ast<DummyCharPointer> recordToAst(Object record, Class<?> cls) {
+    private Ast<DummyCharPointer> recordToAst(Object record, Class<?> cls) {
         var items = ImList.<Ast.KeyValue<DummyCharPointer>>of();
         for (var recCmpt : cls.getRecordComponents()) {
             var recName = recCmpt.getName();
@@ -142,10 +186,10 @@ public class RecMapper {
 
         var body = Ast.ObjectAst.create(items.reverse());
 
-        return subClassWriter.write(body,record);
+        return subClassWriter.write(body, record, this);
     }
 
-    protected Ast<DummyCharPointer> iterableToAst(Iterable<?> iterable) {
+    private Ast<DummyCharPointer> iterableToAst(Iterable<?> iterable) {
         ImList<Ast<DummyCharPointer>> lst = ImList.of();
         for (var it : iterable) {
             var a = toAst(it);
@@ -154,7 +198,7 @@ public class RecMapper {
         return Ast.ArrayAst.create(lst.reverse());
     }
 
-    protected Ast<DummyCharPointer> arrayToAst(Object array) {
+    private Ast<DummyCharPointer> arrayToAst(Object array) {
         ImList<Ast<DummyCharPointer>> lst = ImList.of();
         var arrLen = Array.getLength(array);
         for (var ai = 0; ai < arrLen; ai++) {
@@ -164,10 +208,7 @@ public class RecMapper {
         }
         return Ast.ArrayAst.create(lst.reverse());
     }
-
-    protected Ast<DummyCharPointer> enumToAst(Enum<?> value) {
-        return Ast.StringAst.create(value.name());
-    }
+    //endregion
 
     @SuppressWarnings("unchecked")
     public <T> T parse(Ast<?> ast, Type type) {
@@ -194,7 +235,7 @@ public class RecMapper {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    protected <T> Optional<Function<Ast<?>, T>> parserOf(Type type) {
+    private <T> Optional<Function<Ast<?>, T>> parserOf(Type type) {
         if (type instanceof Class<?> cls) {
             return
                 Optional.of((Ast<?> ast) -> (T) parse(ast, cls));
@@ -250,15 +291,15 @@ public class RecMapper {
         return Optional.empty();
     }
 
-    protected <T> ImList<T> imListParse(Ast.ArrayAst<?> ast, Function<Ast<?>, T> itemParse) {
+    private <T> ImList<T> imListParse(Ast.ArrayAst<?> ast, Function<Ast<?>, T> itemParse) {
         return ast.values().map(itemParse::apply);
     }
 
-    protected <T> List<T> listParse(Ast.ArrayAst<?> ast, Function<Ast<?>, T> itemParse) {
+    private <T> List<T> listParse(Ast.ArrayAst<?> ast, Function<Ast<?>, T> itemParse) {
         return ast.values().map(itemParse::apply).toList();
     }
 
-    private  <T> Optional<T> optionalParse(Ast<?> ast, Function<Ast<?>, T> itemParse) {
+    private <T> Optional<T> optionalParse(Ast<?> ast, Function<Ast<?>, T> itemParse) {
         if (ast instanceof Ast.NullAst<?> nullAst) {
             return Optional.empty();
         }
@@ -356,14 +397,9 @@ public class RecMapper {
         throw new RecMapError("unsupported " + cls);
     }
 
-    private SubClassResolver subClassResolver;
-    {
-        subClassResolver = SubClassResolver.defaultResolver();
-    }
-
     @SuppressWarnings("unchecked")
-    protected <T> T parseSealedInterface(Ast<?> ast, Class<T> cls) {
-        return subClassResolver.resolve(ast,cls.getPermittedSubclasses()).fold(
+    private <T> T parseSealedInterface(Ast<?> ast, Class<T> cls) {
+        return subClassResolver.resolve(ast, cls.getPermittedSubclasses()).fold(
             resolved -> (T) parseSubclass(resolved.body(), resolved.klass()),
             err -> {
                 throw new RecMapError(err);
@@ -371,7 +407,7 @@ public class RecMapper {
         );
     }
 
-    protected <T> T parseSubclass(Ast<?> ast, Class<T> subClass) {
+    private <T> T parseSubclass(Ast<?> ast, Class<T> subClass) {
         if (ast instanceof Ast.ObjectAst<?> objAst) {
             if (subClass.isRecord()) {
                 return parseRecord(objAst, subClass);
@@ -383,7 +419,7 @@ public class RecMapper {
         }
     }
 
-    protected <T> T parseRecord(Ast.ObjectAst<?> objAst, Class<T> recordClass) {
+    private <T> T parseRecord(Ast.ObjectAst<?> objAst, Class<T> recordClass) {
         var recComponents = recordClass.getRecordComponents();
         var recComponentClasses = new Class<?>[recComponents.length];
         var recValues = new Object[recComponents.length];
@@ -415,7 +451,7 @@ public class RecMapper {
         }
     }
 
-    protected <T> T parseEnum(Ast<?> ast, Class<T> enumCls) {
+    private <T> T parseEnum(Ast<?> ast, Class<T> enumCls) {
         if (ast instanceof Ast.StringAst<?> strAst) {
             var enumConsts = enumCls.getEnumConstants();
             for (var enumConst : enumConsts) {

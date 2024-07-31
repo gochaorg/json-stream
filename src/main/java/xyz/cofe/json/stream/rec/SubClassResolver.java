@@ -4,9 +4,6 @@ import xyz.cofe.coll.im.ImList;
 import xyz.cofe.coll.im.Result;
 import xyz.cofe.json.stream.ast.Ast;
 
-import java.lang.reflect.Type;
-import java.util.Optional;
-
 public interface SubClassResolver {
     record Resolved(Ast<?> body, Class<?> klass) {}
 
@@ -25,6 +22,27 @@ public interface SubClassResolver {
                     "key/property:" + ImList.of(subclasses).map(Class::getSimpleName).foldLeft("", (sum, it)->sum.isBlank() ? it : sum+", "+it)+
                     ", actual:");
             } else {
+                return Result.error("expect AstBody, actual: "+ast.getClass());
+            }
+        };
+    }
+
+    static SubClassResolver typeProperty(String propertyName){
+        if( propertyName==null ) throw new IllegalArgumentException("propertyName==null");
+        return (ast, subclasses) -> {
+            if( ast instanceof Ast.ObjectAst<?> objAst ) {
+                return Result.from(
+                    objAst.get(propertyName).flatMap(Ast::asString),
+                    ()->"@type not found"
+                ).fmap( typeName -> {
+                    for (var subCls : subclasses) {
+                        if(subCls.getSimpleName().equals(typeName)){
+                            return Result.ok(subCls);
+                        }
+                    }
+                    return Result.error("type not found "+typeName);
+                }).map( cls -> new Resolved(ast, cls) );
+            }else {
                 return Result.error("expect AstBody, actual: "+ast.getClass());
             }
         };

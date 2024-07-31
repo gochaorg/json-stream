@@ -1,6 +1,7 @@
 package xyz.cofe.json.stream.ast;
 
 import xyz.cofe.coll.im.ImList;
+import xyz.cofe.coll.im.Result;
 import xyz.cofe.json.stream.token.BigIntToken;
 import xyz.cofe.json.stream.token.CharPointer;
 import xyz.cofe.json.stream.token.CloseParentheses;
@@ -28,6 +29,56 @@ import java.util.Optional;
  * @param <S> Источник JSON
  */
 public sealed interface Ast<S extends CharPointer<S>> {
+    default Optional<String> asString(){
+        if( this instanceof StringAst<?> s ) return Optional.of(s.value());
+        return Optional.empty();
+    }
+
+    default Optional<Integer> asInt(){
+        if( this instanceof NumberAst.IntAst<?> a ) return Optional.of(a.value());
+        return Optional.empty();
+    }
+
+    default Optional<Double> asDouble(){
+        if( this instanceof NumberAst.DoubleAst<?> a ) return Optional.of(a.value());
+        return Optional.empty();
+    }
+
+    default Optional<Long> asLong(){
+        if( this instanceof NumberAst.LongAst<?> a ) return Optional.of(a.value());
+        return Optional.empty();
+    }
+
+    default Optional<BigInteger> asBigInt(){
+        if( this instanceof NumberAst.BigIntAst<?> a ) return Optional.of(a.value());
+        return Optional.empty();
+    }
+
+    default Optional<Result.NoValue> asNull(){
+        if( this instanceof Ast.NullAst<?> a ) return Optional.of(Result.NoValue.instance);
+        return Optional.empty();
+    }
+
+    default Optional<String> asIdent(){
+        if( this instanceof Ast.IdentAst<?> a ) return Optional.of(a.value());
+        return Optional.empty();
+    }
+
+    default Optional<Boolean> asBoolean(){
+        if( this instanceof Ast.BooleanAst<?> a ) return Optional.of(a.value());
+        return Optional.empty();
+    }
+
+    default Optional<ImList<Ast<S>>> asList(){
+        if( this instanceof Ast.ArrayAst<S> a ) return Optional.of(a.values());
+        return Optional.empty();
+    }
+
+    default Optional<Ast.ObjectAst<S>> asObject(){
+        if( this instanceof Ast.ObjectAst<S> a ) return Optional.of(a);
+        return Optional.empty();
+    }
+
     /**
      * Комментарий
      *
@@ -239,7 +290,9 @@ public sealed interface Ast<S extends CharPointer<S>> {
         }
     }
 
-    sealed interface Key<S extends CharPointer<S>> extends Ast<S> {}
+    sealed interface Key<S extends CharPointer<S>> extends Ast<S> {
+        String value();
+    }
 
     /**
      * Пара ключ-значение
@@ -285,6 +338,10 @@ public sealed interface Ast<S extends CharPointer<S>> {
                     if(key.equals(str.value())){
                         return Optional.of(kv.value());
                     }
+                }else if( kv.key() instanceof Ast.IdentAst<S> idt){
+                    if( key.equals(idt.value()) ){
+                        return Optional.of(kv.value());
+                    }
                 }
             }
             return Optional.empty();
@@ -292,6 +349,20 @@ public sealed interface Ast<S extends CharPointer<S>> {
 
         public ImList<String> stringKeys(){
             return values().fmap(Ast.StringAst.class).map(StringAst::value);
+        }
+
+        public Ast<S> put(StringToken<S> key, Ast<S> value){
+            if( key==null ) throw new IllegalArgumentException("key==null");
+            if( value==null ) throw new IllegalArgumentException("value==null");
+            var vals = values.filter( kv -> !key.value().equals(kv.key().value()) ).prepend( new KeyValue<>(new StringAst<>(key),value) );
+            return new ObjectAst<>( vals, begin(), end() );
+        }
+
+        public Ast<S> put(Key<S> key, Ast<S> value) {
+            if( key==null ) throw new IllegalArgumentException("key==null");
+            if( value==null ) throw new IllegalArgumentException("value==null");
+            var vals = values.filter( kv -> !key.value().equals(kv.key().value()) ).prepend( new KeyValue<>(key,value) );
+            return new ObjectAst<>( vals, begin(), end() );
         }
     }
 

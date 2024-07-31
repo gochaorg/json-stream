@@ -44,6 +44,25 @@ public class RecMapTest {
         System.out.println(node);
     }
 
+
+    @Test
+    public void typeProperty(){
+        RecMapper mapper = new RecMapper();
+        var propName = "@type";
+        mapper
+            .subClassResolver(SubClassResolver.typeProperty(propName))
+            .subClassWriter(SubClassWriter.typeProperty(propName));
+
+        var ast = mapper.toAst(new NodeB("abc"));
+        var json = AstWriter.toString( ast );
+        System.out.println(json);
+
+        assertTrue(json.contains("\"@type\""));
+
+        var node = mapper.parse(ast, Node.class);
+        System.out.println(node);
+    }
+
     @Test
     public void imListTest(){
         RecMapper mapper = new RecMapper();
