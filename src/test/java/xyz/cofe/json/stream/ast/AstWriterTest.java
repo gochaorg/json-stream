@@ -29,7 +29,7 @@ public class AstWriterTest {
                 "a": 1,
                 b: [],
                 h: {},
-                c: [ 4, 5 ],
+                c: [ 4, 5, 6, 7, 8, 9 ],
                 e: {
                   g: 8,
                   h: 9

@@ -18,13 +18,13 @@
         <dependency>
             <groupId>xyz.cofe</groupId>
             <artifactId>coll-im</artifactId>
-            <version>3.1</version>
+            <version>4.0</version>
         </dependency>
 
         <dependency>
             <groupId>xyz.cofe</groupId>
             <artifactId>htree-rec</artifactId>
-            <version>3.1</version>
+            <version>4.0</version>
         </dependency>
 
         <dependency>

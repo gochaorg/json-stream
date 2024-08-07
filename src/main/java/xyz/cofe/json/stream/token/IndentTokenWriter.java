@@ -78,9 +78,21 @@ public class IndentTokenWriter implements TokenWriter {
         output.write(NewLine);
     }
 
+    //region indent : String
+    private String indent = "    ";
+
+    public String indent() {return indent;}
+
+    public IndentTokenWriter indent(String value) {
+        if (value == null) throw new IllegalArgumentException("value==null");
+        this.indent = value;
+        return this;
+    }
+    //endregion
+
     private void writeIndent(int level) {
         if (level > 0) {
-            writeWhiteSpace(level * 4);
+            output.write(new Whitespace<>(indent.repeat(level), emptyPtr, emptyPtr));
         }
     }
 
@@ -88,10 +100,10 @@ public class IndentTokenWriter implements TokenWriter {
         writeIndent(state.size());
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings({"SameParameterValue"})
     private void writeWhiteSpace(int count) {
         if (count > 0) {
-            output.write(new Whitespace(" ".repeat(count), emptyPtr, emptyPtr));
+            output.write(new Whitespace<>(" ".repeat(count), emptyPtr, emptyPtr));
         }
     }
 
@@ -178,6 +190,8 @@ public class IndentTokenWriter implements TokenWriter {
         flush();
     }
 
+    private int newLineEach = 1;
+
     private void addNestedItem(ItemType itemType) {
         var st = state.poll();
         if (st == null) return;
@@ -193,9 +207,19 @@ public class IndentTokenWriter implements TokenWriter {
                 (st instanceof ArrState)
         ) {
             writingQueue.add(wo -> {
-                if (st.compoundCount() > 0 || st.nestedWriteCount == 0 || st instanceof ObjState) {
-                    writeIndent(level);
+                if (newLineEach > 1) {
+                    if (st.compoundCount() > 0
+                        || st.nestedWriteCount % newLineEach == 0
+                        || st instanceof ObjState
+                    ) {
+                        if( st.nestedWriteCount>0 ){
+                            writeNewLine();
+                        }
+                        writeIndent(level);
+                    }
                     st.nestedWriteCount++;
+                } else {
+                    writeIndent(level);
                 }
             });
         }
@@ -276,9 +300,14 @@ public class IndentTokenWriter implements TokenWriter {
 
         var st = state.peek();
         writingQueue.add(wo -> {
-            if (st != null && (
-                st.compoundCount() > 0 || st instanceof ObjState
-            )) {
+            if (newLineEach > 1) {
+                if (st != null && (
+                    st.compoundCount() > 0
+                        || st instanceof ObjState
+                )) {
+                    writeNewLine();
+                }
+            } else {
                 writeNewLine();
             }
         });
