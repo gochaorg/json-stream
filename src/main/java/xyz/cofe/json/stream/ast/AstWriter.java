@@ -58,7 +58,7 @@ public class AstWriter {
         } else if (ast instanceof Ast.ObjectAst<?> obj) {
             writer.write(obj.begin());
 
-            Ast<?> prev = null;
+            Ast.KeyValue<?> prev = null;
             for (var kv : obj.values()) {
                 if( prev!=null ){
                     writer.write(Comma.instance);

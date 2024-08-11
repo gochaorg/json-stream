@@ -301,7 +301,7 @@ public sealed interface Ast<S extends CharPointer<S>> {
      * @param value значение
      * @param <S>
      */
-    record KeyValue<S extends CharPointer<S>>(Key<S> key, Ast<S> value) implements Ast<S> {
+    record KeyValue<S extends CharPointer<S>>(Key<S> key, Ast<S> value) {
         public static KeyValue<DummyCharPointer> create(Key<DummyCharPointer> key, Ast<DummyCharPointer> value) {
             if (key == null) throw new IllegalArgumentException("key==null");
             if (value == null) throw new IllegalArgumentException("value==null");
