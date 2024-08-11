@@ -18,7 +18,7 @@
         <dependency>
             <groupId>xyz.cofe</groupId>
             <artifactId>coll-im</artifactId>
-            <version>4.0</version>
+            <version>4.1-SNAPSHOT</version>
         </dependency>
 
         <dependency>
