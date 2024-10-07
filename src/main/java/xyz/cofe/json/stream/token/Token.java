@@ -1,5 +1,9 @@
 package xyz.cofe.json.stream.token;
 
+/**
+ * Лексемы json
+ * @param <S> тип исходника
+ */
 public sealed interface Token<S extends CharPointer<S>>
     permits BigIntToken,
             IntToken,
@@ -20,7 +24,15 @@ public sealed interface Token<S extends CharPointer<S>>
             SLComment,        // //
             Whitespace        // Пробельный символ
 {
+    /**
+     * Возвращает указатель на начало в исходнике
+     * @return начало
+     */
     S begin();
 
+    /**
+     * Возвращает указатель на конец в исходнике
+     * @return конец
+     */
     S end();
 }

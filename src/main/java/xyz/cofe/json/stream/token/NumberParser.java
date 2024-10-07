@@ -85,6 +85,10 @@ public class NumberParser<S extends CharPointer<S>> implements TokenParser<S> {
         return Optional.empty();
     }
 
+    /**
+     * Сырое значение
+     * @param value сырое значение
+     */
     public record RawFloat(String value) {
         public RawFloat {
             Objects.requireNonNull(value);
@@ -157,6 +161,12 @@ public class NumberParser<S extends CharPointer<S>> implements TokenParser<S> {
         return Optional.of(Tuple2.of(sb.toString(), p));
     }
 
+    /**
+     * Сырое значение, целое
+     * @param digits цифры
+     * @param base системы счисления
+     * @param bigInt признак bigint
+     */
     public record RawInt(ImList<Integer> digits, int base, boolean bigInt) {
         public RawInt {
             Objects.requireNonNull(digits);
@@ -166,6 +176,10 @@ public class NumberParser<S extends CharPointer<S>> implements TokenParser<S> {
             if (base > 16) throw new IllegalArgumentException("base>16");
         }
 
+        /**
+         * Возвращает BigInt
+         * @return значение
+         */
         public BigInteger toBigInteger() {
             BigInteger num = BigInteger.ZERO;
             BigInteger kof = BigInteger.ONE;
@@ -183,6 +197,9 @@ public class NumberParser<S extends CharPointer<S>> implements TokenParser<S> {
             ).map((a, b) -> a);
         }
 
+        /**
+         * Предпочтительное представление
+         */
         public sealed interface PreferenceNumber {
             record Int(int number) implements PreferenceNumber {}
             record Long(long number) implements PreferenceNumber {}
@@ -190,6 +207,11 @@ public class NumberParser<S extends CharPointer<S>> implements TokenParser<S> {
             record OutOfLong(BigInteger number) implements PreferenceNumber {}
         }
 
+        /**
+         * Выбирает подходящее компактное представление не теряя в точности
+         * @param sign признак отрицательного значения
+         * @return предпочтительное представление
+         */
         public PreferenceNumber toPreferenceNumber(int sign) {
             var bigNum = toBigInteger();
             if (sign < 0) bigNum = BigInteger.ZERO.subtract(bigNum);

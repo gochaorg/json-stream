@@ -14,6 +14,10 @@ public record SLComment<S extends CharPointer<S>>(
     S begin,
     S end
 ) implements Token<S> {
+    /**
+     * Парсер лексемы
+     * @param <S> Тип исходника
+     */
     public static class Parser<S extends CharPointer<S>> implements TokenParser<S> {
         @Override
         public Optional<? extends Token<S>> parse(S ptr) {

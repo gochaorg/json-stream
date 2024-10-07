@@ -5,7 +5,7 @@ package xyz.cofe.json.stream.token;
  * @param value число
  * @param begin начало лексемы
  * @param end конец лексемы
- * @param <S>
+ * @param <S> Указатель на символы строки
  */
 public record DoubleToken<S extends CharPointer<S>>(
     double value,

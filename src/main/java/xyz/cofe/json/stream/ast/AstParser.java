@@ -31,29 +31,84 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-/*
-
-                   | init   | obj   | obj.k | obj.v | arr   | arr.c
--------------------|--------|-------|-------|-------|-------|------
-BigIntToken        | init   | err   | err   | obj.c | arr.c | err
-IntToken           | init   | err   | err   | obj.c | arr.c | err
-LongToken          | init   | err   | err   | obj.c | arr.c | err
-DoubleToken        | init   | err   | err   | obj.c | arr.c | err
-StringToken        | init   | obj.k | err   | obj.c | arr.c | err
-FalseToken         | init   | err   | err   | obj.c | arr.c | err
-TrueToken          | init   | err   | err   | obj.c | arr.c | err
-NullToken          | init   | err   | err   | obj.c | arr.c | err
-IdentifierToken    | init   | obj.k | err   | obj.c | arr.c | err
-OpenParentheses  { | obj    | err   | err   | obj   | obj   | err
-CloseParentheses } | err    | err   | err   | init  | err   | err
-OpenSquare       [ | arr    | err   | err   | arr   | arr   | err
-CloseSquare      ] | err    | err   | err   | err   | init  | init
-Colon            : | err    | err   | obj.v | err   | err   | err
-Comma            , | err    | err   | err   | obj   | err   | arr
-MLComment          | init   | obj   | obj.k | obj.v | arr   | arr.c
-SLComment          | init   | obj   | obj.k | obj.v | arr   | arr.c
-Whitespace         | init   | obj   | obj.k | obj.v | arr   | arr.c
-
+/**
+ * Парсер JSON
+ *
+ * <p>Пример использования</p>
+ *
+ * <pre>
+ * var ast = AstParser.parse("""
+ * {
+ *     "a": 1,
+ *     b: 2,
+ *     c: [ 4, 5 ]
+ * }
+ * """ );
+ * </pre>
+ *
+ * <p>Парсинг из потока лексем</p>
+ *
+ * <pre>
+ * // Исходник, может быть строкой, файлом или сокетом
+ * var source = "[ 1, true, false, null, [], [ 'abc', 2.5 ] ]";
+ *
+ * // Лексический анализатор может выдавать последовательно лексемы
+ * var parsed = Tokenizer.parse(source);
+ *
+ * // Тут будет получен результат
+ * Ast&lt;StringPointer&gt; last = null;
+ *
+ * // Создаем парсер
+ * AstParser&lt;StringPointer&gt; parser = new AstParser.Init&lt;&gt;();
+ *
+ * // Последовательно скармливаем лексемы в парсер
+ * for (var token : parsed.tokens()) {
+ *
+ *     // Очередная лексема
+ *     System.out.println("token " + token);
+ *
+ *     // Скармливаем ее
+ *     var astParsed = parser.input(token);
+ *
+ *     // Переключаем парсер на новое состояние
+ *     parser = astParsed.parser();
+ *
+ *     // Если есть результат выводим его
+ *     astParsed.result().ifPresent(ast -&gt; {
+ *
+ *         // Тут будет распознаное значение json
+ *         System.out.println("result " + ast);
+ *     });
+ *
+ *     // Получаем последнее значение
+ *     last = astParsed.result().orElse(null);
+ * }
+ * </pre>
+ *
+ * <p>Таблица переходов состояния</p>
+ *
+ * <pre>
+ *                    | init   | obj   | obj.k | obj.v | arr   | arr.c
+ * -------------------|--------|-------|-------|-------|-------|------
+ * BigIntToken        | init   | err   | err   | obj.c | arr.c | err
+ * IntToken           | init   | err   | err   | obj.c | arr.c | err
+ * LongToken          | init   | err   | err   | obj.c | arr.c | err
+ * DoubleToken        | init   | err   | err   | obj.c | arr.c | err
+ * StringToken        | init   | obj.k | err   | obj.c | arr.c | err
+ * FalseToken         | init   | err   | err   | obj.c | arr.c | err
+ * TrueToken          | init   | err   | err   | obj.c | arr.c | err
+ * NullToken          | init   | err   | err   | obj.c | arr.c | err
+ * IdentifierToken    | init   | obj.k | err   | obj.c | arr.c | err
+ * OpenParentheses  { | obj    | err   | err   | obj   | obj   | err
+ * CloseParentheses } | err    | err   | err   | init  | err   | err
+ * OpenSquare       [ | arr    | err   | err   | arr   | arr   | err
+ * CloseSquare      ] | err    | err   | err   | err   | init  | init
+ * Colon            : | err    | err   | obj.v | err   | err   | err
+ * Comma            , | err    | err   | err   | obj   | err   | arr
+ * MLComment          | init   | obj   | obj.k | obj.v | arr   | arr.c
+ * SLComment          | init   | obj   | obj.k | obj.v | arr   | arr.c
+ * Whitespace         | init   | obj   | obj.k | obj.v | arr   | arr.c
+ * </pre>
  */
 public sealed interface AstParser<S extends CharPointer<S>> {
     default int getNestedLevel() {
@@ -708,7 +763,7 @@ public sealed interface AstParser<S extends CharPointer<S>> {
         }
     }
 
-    public static Ast<?> parse(String source) {
+    public static Ast<StringPointer> parse(String source) {
         if (source == null) throw new IllegalArgumentException("source==null");
         var tokens = Tokenizer.parse(source);
 

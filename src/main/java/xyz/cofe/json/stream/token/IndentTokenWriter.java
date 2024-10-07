@@ -4,6 +4,10 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.function.Consumer;
 
+/**
+ * Записывает лексемы с учетом отступа/вложенности объектов
+ * аля Pretty
+ */
 public class IndentTokenWriter implements TokenWriter {
     private final TokenWriter output;
 

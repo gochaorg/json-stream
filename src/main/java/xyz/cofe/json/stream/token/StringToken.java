@@ -18,22 +18,32 @@ import java.util.Optional;
  * escape_unicode_ext ::= '\&#x0075;' '{' hex_char hex_char hex_char hex_char hex_char '}'
  * </pre>
  *
- * @param value
- * @param begin
- * @param end
- * @param <S>
+ * @param value декодированное значение
+ * @param begin начало лексемы
+ * @param end конец лексемы
+ * @param <S> Указатель на символы строки
  */
 public record StringToken<S extends CharPointer<S>>(
     String value,
     S begin,
     S end
 ) implements Token<S> {
+    /**
+     * Конструктор
+     * @param value декодированное значение
+     * @param begin начало лексемы
+     * @param end конец лексемы
+     */
     public StringToken {
         if( value==null ) throw new IllegalArgumentException("value==null");
         if( begin==null ) throw new IllegalArgumentException("begin==null");
         if( end==null ) throw new IllegalArgumentException("end==null");
     }
 
+    /**
+     * Парсер лексемы
+     * @param <S> Тип исходника
+     */
     public static class Parser<S extends CharPointer<S>> implements TokenParser<S> {
         @Override
         public Optional<StringToken<S>> parse(S ptr) {

@@ -1,5 +1,8 @@
 package xyz.cofe.json.stream.token;
 
+/**
+ * Интерфейс записи лексем
+ */
 public interface TokenWriter {
     void write(BigIntToken<?> token);
     void write(LongToken<?> token);

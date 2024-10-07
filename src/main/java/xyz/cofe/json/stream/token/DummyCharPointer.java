@@ -2,6 +2,9 @@ package xyz.cofe.json.stream.token;
 
 import java.util.Optional;
 
+/**
+ * Фиктивный указатель, используется для генерации Ast деревьев
+ */
 public final class DummyCharPointer implements CharPointer<DummyCharPointer> {
     public final static DummyCharPointer instance = new DummyCharPointer();
 

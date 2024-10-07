@@ -4,20 +4,38 @@ import xyz.cofe.coll.im.ImList;
 
 import java.util.Optional;
 
+/**
+ * Парсинг лексем
+ * @param <S> расположение в исходнике
+ */
 public class Tokenizer<S extends CharPointer<S>> {
     private final ImList<TokenParser<S>> parsers;
 
+    /**
+     * Конструктор
+     * @param parsers парсеры
+     */
     public Tokenizer(Iterable<TokenParser<S>> parsers) {
         if (parsers == null) throw new IllegalArgumentException("parsers==null");
         this.parsers = ImList.from(parsers);
     }
 
+    /**
+     * Конструктор
+     * @param parsers парсеры
+     */
     @SafeVarargs
     public Tokenizer(TokenParser<S>... parsers) {
         if (parsers == null) throw new IllegalArgumentException("parsers==null");
         this.parsers = ImList.of(parsers);
     }
 
+    /**
+     * Распознанные лексемы
+     * @param tokens лексемы
+     * @param next конец последней лексемы
+     * @param <S> тип исходника
+     */
     public record Parsed<S extends CharPointer<S>>(ImList<Token<S>> tokens, S next) {}
 
     public Parsed<S> parse(S ptr) {
@@ -45,6 +63,11 @@ public class Tokenizer<S extends CharPointer<S>> {
         return new Parsed<>(tokens.reverse(), ptr);
     }
 
+    /**
+     * Парсинг
+     * @param source исходник
+     * @return лексемы
+     */
     public static Parsed<StringPointer> parse(String source){
         if( source==null ) throw new IllegalArgumentException("source==null");
         var ptr = new StringPointer(source,0);
@@ -52,6 +75,11 @@ public class Tokenizer<S extends CharPointer<S>> {
         return tokenizer.parse(ptr);
     }
 
+    /**
+     * Парсер по умолчанию
+     * @return Лексический анализатор
+     * @param <S> тип исходника
+     */
     public static <S extends CharPointer<S>> Tokenizer<S> defaultTokenizer(){
         return new Tokenizer<S>(
             new KeyWordParser<>(),

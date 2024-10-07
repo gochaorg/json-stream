@@ -1,15 +1,21 @@
 package xyz.cofe.json.stream.ast;
 
-import xyz.cofe.json.stream.token.CharPointer;
 import xyz.cofe.json.stream.token.Colon;
 import xyz.cofe.json.stream.token.Comma;
 import xyz.cofe.json.stream.token.SimpleTokenWriter;
-import xyz.cofe.json.stream.token.StringPointer;
 import xyz.cofe.json.stream.token.TokenWriter;
 
 import java.io.StringWriter;
 
+/**
+ * Записывает ({@link Ast}) дерево в {@link TokenWriter}
+ */
 public class AstWriter {
+    /**
+     * Преобразование к строке
+     * @param ast дерево
+     * @return строка
+     */
     public static String toString(Ast<?> ast){
         if( ast==null ) throw new IllegalArgumentException("ast==null");
         StringWriter sw = new StringWriter();

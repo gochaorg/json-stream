@@ -2,9 +2,16 @@ package xyz.cofe.json.stream.token;
 
 import java.io.IOException;
 
+/**
+ * Пишет лексемы JSON в их обычном виде
+ */
 public class SimpleTokenWriter implements TokenWriter {
     private final Appendable output;
 
+    /**
+     * Конструктор
+     * @param output куда записывать
+     */
     public SimpleTokenWriter(Appendable output){
         if( output==null ) throw new IllegalArgumentException("output==null");
         this.output = output;

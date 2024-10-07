@@ -5,7 +5,18 @@ import xyz.cofe.coll.im.Tuple2;
 import java.util.Optional;
 import java.util.function.Function;
 
+/**
+ * Лексический анализатор, доп функции парсинга
+ */
 public class TokenParsers {
+    /**
+     * Парсинг - ожидание текста в определенной позиции
+     * @param ptr позиция
+     * @param text ожидаемый текст
+     * @param ignoreCase игнорировать текст
+     * @return распознанный текст
+     * @param <S> тип исходника
+     */
     public static <S extends CharPointer<S>> Optional<Tuple2<String, S>> expect(S ptr, String text, boolean ignoreCase) {
         if( ptr==null ) throw new IllegalArgumentException("ptr==null");
         if( text==null ) throw new IllegalArgumentException("text==null");
@@ -29,6 +40,13 @@ public class TokenParsers {
         return Optional.of(Tuple2.of(buff.toString(), ptr.move(text.length())));
     }
 
+    /**
+     * Соединение двух ожидаемых строк в одну
+     * @param first первая ожидаемая строка
+     * @param second вторая строка
+     * @return распознанный текст
+     * @param <S> тип исходника
+     */
     public static <S extends CharPointer<S>> Function<S, Optional<Tuple2<String, S>>> join(Function<S, Optional<Tuple2<String, S>>> first, Function<S, Optional<Tuple2<String, S>>> second) {
         if( first==null ) throw new IllegalArgumentException("first==null");
         if( second==null ) throw new IllegalArgumentException("second==null");
@@ -36,6 +54,12 @@ public class TokenParsers {
         return ptr -> first.apply(ptr).flatMap(tup1 -> second.apply(tup1._2()).flatMap(tup2 -> Optional.of(Tuple2.of(tup1._1() + tup2._1(), tup2._2()))));
     }
 
+    /**
+     * Создает парсинг для операции OR/ИЛИ
+     * @param parsers парсеры
+     * @return распознанный текст
+     * @param <S> тип исходника
+     */
     public static <S extends CharPointer<S>> Function<S, Optional<Tuple2<String, S>>> or(
         Function<S, Optional<Tuple2<String, S>>> ... parsers
     ) {

@@ -4,7 +4,9 @@ import xyz.cofe.coll.im.ImList;
 import xyz.cofe.coll.im.Result;
 import xyz.cofe.coll.im.iter.ExtIterable;
 import xyz.cofe.json.stream.ast.Ast;
+import xyz.cofe.json.stream.ast.AstParser;
 import xyz.cofe.json.stream.token.CharPointer;
+import xyz.cofe.json.stream.token.StringPointer;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -17,6 +19,13 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class QuerySetFin<S extends CharPointer<S>> extends QuerySet<S, QuerySetFin<S>> {
+    public static QuerySetFin<StringPointer> fromJson( String json ){
+        if( json==null ) throw new IllegalArgumentException("json==null");
+        return new QuerySetFin<>(
+            AstParser.parse(json)
+        );
+    }
+
     public QuerySetFin(ExtIterable<Ast<S>> source) {
         super(source);
     }
@@ -37,6 +46,18 @@ public class QuerySetFin<S extends CharPointer<S>> extends QuerySet<S, QuerySetF
     @Override
     protected QuerySetFin<S> create(ExtIterable<Ast<S>> source) {
         return new QuerySetFin<>(source);
+    }
+
+    private ImList<Ast<S>> list;
+    public ImList<Ast<S>> toList(){
+        if( list!=null )return list;
+        list = source.toImList();
+        return list;
+    }
+
+    public Optional<Ast<S>> get(int index){
+        if( index<0 )return Optional.empty();
+        return toList().get( (int)index );
     }
 
     //region count() : long
@@ -71,6 +92,22 @@ public class QuerySetFin<S extends CharPointer<S>> extends QuerySet<S, QuerySetF
 
     public Optional<String> firstIdent() {
         return toIdents().first();
+    }
+
+    public ImList<String> toTextList() {
+        return ImList.from(toTexts());
+    }
+
+    public Optional<String> firstText() {
+        return toTexts().first();
+    }
+
+    public ImList<Number> toNumberList() {
+        return ImList.from(toNumbers());
+    }
+
+    public Optional<Number> firstNumber() {
+        return toNumbers().first();
     }
 
     public ImList<Integer> toIntList() {
