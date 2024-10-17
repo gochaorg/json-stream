@@ -1,6 +1,7 @@
 package xyz.cofe.json.stream.rec;
 
 import xyz.cofe.coll.im.ImList;
+import xyz.cofe.coll.im.Result;
 import xyz.cofe.json.stream.ast.Ast;
 import xyz.cofe.json.stream.ast.AstParser;
 import xyz.cofe.json.stream.ast.AstWriter;
@@ -9,13 +10,18 @@ import xyz.cofe.json.stream.token.DummyCharPointer;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
+/**
+ * Сериализация sealed типов
+ */
 public class RecMapper {
     //region subClassWriter : SubClassWriter
     private SubClassWriter subClassWriter;
@@ -24,11 +30,22 @@ public class RecMapper {
         subClassWriter = SubClassWriter.defaultWriter;
     }
 
+    /**
+     * Указывает способ указания подтипа
+     *
+     * @return способ указания подтипа
+     */
     @SuppressWarnings("UnusedReturnValue")
     public SubClassWriter subClassWriter() {
         return subClassWriter;
     }
 
+    /**
+     * Указывает способ указания подтипа
+     *
+     * @param subClassWriter способ указания подтипа
+     * @return SELF ссылка
+     */
     @SuppressWarnings("UnusedReturnValue")
     public RecMapper subClassWriter(SubClassWriter subClassWriter) {
         if (subClassWriter == null) throw new IllegalArgumentException("subClassWriter==null");
@@ -44,11 +61,21 @@ public class RecMapper {
         subClassResolver = SubClassResolver.defaultResolver();
     }
 
+    /**
+     * Указывает способ получения имени/типа экземпляра
+     *
+     * @return резолвинг подтипа
+     */
     @SuppressWarnings("UnusedReturnValue")
     public SubClassResolver subClassResolver() {
         return subClassResolver;
     }
 
+    /**
+     * Указывает способ получения имени/типа экземпляра
+     *
+     * @return резолвинг подтипа
+     */
     @SuppressWarnings("UnusedReturnValue")
     public RecMapper subClassResolver(SubClassResolver subClassResolver) {
         if (subClassResolver == null) throw new IllegalArgumentException("subClassResolver==null");
@@ -58,50 +85,122 @@ public class RecMapper {
     //endregion
 
     //region toAst() primitives
+
+    /**
+     * Формирование AST узла
+     *
+     * @param value значение узла
+     * @return узел ast
+     */
     public Ast.StringAst<DummyCharPointer> toAst(String value) {
         return Ast.StringAst.create(value);
     }
 
+    /**
+     * Формирование AST узла
+     *
+     * @param value значение узла
+     * @return узел ast
+     */
     public Ast.StringAst<DummyCharPointer> toAst(char value) {
         return Ast.StringAst.create("" + value);
     }
 
+    /**
+     * Формирование AST узла
+     *
+     * @param value значение узла
+     * @return узел ast
+     */
     public Ast.NumberAst.IntAst<DummyCharPointer> toAst(byte value) {
         return Ast.NumberAst.IntAst.create(0xFF & value);
     }
 
+    /**
+     * Формирование AST узла
+     *
+     * @param value значение узла
+     * @return узел ast
+     */
     public Ast.NumberAst.IntAst<DummyCharPointer> toAst(short value) {
         return Ast.NumberAst.IntAst.create(value);
     }
 
+    /**
+     * Формирование AST узла
+     *
+     * @param value значение узла
+     * @return узел ast
+     */
     public Ast.NumberAst.IntAst<DummyCharPointer> toAst(int value) {
         return Ast.NumberAst.IntAst.create(value);
     }
 
+    /**
+     * Формирование AST узла
+     *
+     * @param value значение узла
+     * @return узел ast
+     */
     public Ast.NumberAst.LongAst<DummyCharPointer> toAst(long value) {
         return Ast.NumberAst.LongAst.create(value);
     }
 
+    /**
+     * Формирование AST узла
+     *
+     * @param value значение узла
+     * @return узел ast
+     */
     public Ast.NumberAst.BigIntAst<DummyCharPointer> toAst(BigInteger value) {
         return Ast.NumberAst.BigIntAst.create(value);
     }
 
+    /**
+     * Формирование AST узла
+     *
+     * @param value значение узла
+     * @return узел ast
+     */
     public Ast.NumberAst.DoubleAst<DummyCharPointer> toAst(float value) {
         return Ast.NumberAst.DoubleAst.create(value);
     }
 
+    /**
+     * Формирование AST узла
+     *
+     * @param value значение узла
+     * @return узел ast
+     */
     public Ast.NumberAst.DoubleAst<DummyCharPointer> toAst(double value) {
         return Ast.NumberAst.DoubleAst.create(value);
     }
 
+    /**
+     * Формирование AST узла
+     *
+     * @param value значение узла
+     * @return узел ast
+     */
     public Ast.BooleanAst<DummyCharPointer> toAst(boolean value) {
         return Ast.NumberAst.BooleanAst.create(value);
     }
 
+    /**
+     * Формирование AST узла
+     *
+     * @return узел ast
+     */
     public Ast.NullAst<DummyCharPointer> nullToAst() {
         return Ast.NumberAst.NullAst.create();
     }
 
+    /**
+     * Формирование AST узла
+     *
+     * @param value значение узла
+     * @return узел ast
+     */
     public Ast.IdentAst<DummyCharPointer> identToAst(String value) {
         return Ast.NumberAst.IdentAst.create(value);
     }
@@ -114,7 +213,48 @@ public class RecMapper {
     //endregion
 
     //region toAst() containers
+
+    private Function<Object, Optional<Ast<DummyCharPointer>>> customObjectSerialize = DefaultObjectSerialize;
+
+    /**
+     * Указывает собственный способ кодирования
+     *
+     * @return собственный способ кодирования
+     */
+    public Function<Object, Optional<Ast<DummyCharPointer>>> customObjectSerialize() {
+        return customObjectSerialize;
+    }
+
+    /**
+     * Указывает собственный способ кодирования
+     *
+     * @param ser - функция ( value ) -> Optional &lt;Ast&gt; - если функция возвращает empty, то используется алгоритм по умолчанию
+     * @return SELF ссылка
+     */
+    public RecMapper customObjectSerialize(Function<Object, Optional<Ast<DummyCharPointer>>> ser) {
+        if (ser == null) throw new IllegalArgumentException("ser==null");
+        customObjectSerialize = ser;
+        return this;
+    }
+
+    /**
+     * Собственный способ кодирования по умолчанию (empty)
+     */
+    public static final Function<Object, Optional<Ast<DummyCharPointer>>> DefaultObjectSerialize
+        = obj -> Optional.empty();
+
+    /**
+     * Формирование Ast
+     *
+     * @param record значение
+     * @return узел ast
+     */
     public Ast<DummyCharPointer> toAst(Object record) {
+        var custom = customObjectSerialize.apply(record);
+        if (custom.isPresent()) {
+            return custom.get();
+        }
+
         if (record == null) return nullToAst();
 
         Class<?> cls = record.getClass();
@@ -163,10 +303,71 @@ public class RecMapper {
         throw new RecMapError("can't serialize " + cls);
     }
 
+    /**
+     * Кодирование значения в json string
+     *
+     * @param record значение
+     * @return json string
+     */
     public String toJson(Object record) {
         if (record == null) throw new IllegalArgumentException("record==null");
         return AstWriter.toString(toAst(record));
     }
+
+    /**
+     * Кодирование поля Record
+     *
+     * @param record          Объект record
+     * @param recordClass     Класс объекта record
+     * @param fieldName       Имя поля json, берется из имени поля record
+     * @param fieldValue      Значение поля record
+     * @param recordComponent Описание поля record
+     * @param keyMapper       Кодирование ключа по умолчанию
+     * @param valueMapper     Кодирование значения по умолчанию
+     */
+    public record FieldToJson(
+        Object record,
+        Class<?> recordClass,
+        String fieldName,
+        Object fieldValue,
+        RecordComponent recordComponent,
+        Function<String, Ast.Key<DummyCharPointer>> keyMapper,
+        Function<Object, Ast<DummyCharPointer>> valueMapper
+    ) {
+        public FieldToJson fieldName(String name) {
+            if (name == null) throw new IllegalArgumentException("name==null");
+            return new FieldToJson(record, recordClass, name, fieldValue, recordComponent, keyMapper, valueMapper);
+        }
+    }
+
+    private Function<FieldToJson, Optional<Ast.KeyValue<DummyCharPointer>>> fieldSerialization
+        = DefaultFieldSerialization;
+
+    public Function<FieldToJson, Optional<Ast.KeyValue<DummyCharPointer>>> fieldSerialization(){
+        return fieldSerialization;
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    public RecMapper fieldSerialization(Function<FieldToJson, Optional<Ast.KeyValue<DummyCharPointer>>> serialization) {
+        if (serialization == null) throw new IllegalArgumentException("serialization==null");
+        fieldSerialization = serialization;
+        return this;
+    }
+
+    @SuppressWarnings({"unused", "OptionalGetWithoutIsPresent"})
+    public static final Function<FieldToJson, Optional<Ast.KeyValue<DummyCharPointer>>> DefaultFieldSerialization = fieldToJson -> {
+        if (fieldToJson.fieldValue() == null) return Optional.empty();
+        if (fieldToJson.fieldValue() instanceof Optional<?> opt && opt.isEmpty()) return Optional.empty();
+
+        var recJsonValue =
+            fieldToJson
+                .valueMapper().apply(
+                    fieldToJson.fieldValue() instanceof Optional<?> opt ? opt.get() : fieldToJson.fieldValue());
+
+        var recJsonName = fieldToJson.keyMapper.apply(fieldToJson.fieldName());
+
+        return Optional.of(Ast.KeyValue.create(recJsonName, recJsonValue));
+    };
 
     private Ast<DummyCharPointer> recordToAst(Object record, Class<?> cls) {
         var items = ImList.<Ast.KeyValue<DummyCharPointer>>of();
@@ -174,11 +375,12 @@ public class RecMapper {
             var recName = recCmpt.getName();
             try {
                 var recValue = recCmpt.getAccessor().invoke(record);
-                if (recValue == null || (recValue instanceof Optional<?> optVal && optVal.isEmpty())) continue;
 
-                var recJsonValue = toAst(recValue instanceof Optional<?> opt ? opt.get() : recValue);
-                var recJsonName = toAst(recName);
-                items = items.prepend(Ast.KeyValue.create(recJsonName, recJsonValue));
+                var f2j = fieldSerialization.apply(new FieldToJson(
+                    record, cls, recName, recValue, recCmpt, this::toAst, this::toAst
+                ));
+                if (f2j.isEmpty()) continue;
+                items = items.prepend(f2j.get());
             } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new RecMapError("can't read record component " + recName, e);
             }
@@ -320,7 +522,7 @@ public class RecMapper {
             } else {
                 throw new RecMapError("expect string in json");
             }
-        } else if (cls == Boolean.class) {
+        } else if (cls == Boolean.class || cls == boolean.class) {
             if (ast instanceof Ast.BooleanAst.TrueAst<?>) {
                 return (T) Boolean.TRUE;
             } else if (ast instanceof Ast.BooleanAst.FalseAst<?>) {
@@ -328,7 +530,7 @@ public class RecMapper {
             } else {
                 throw new RecMapError("expect boolean in json");
             }
-        } else if (cls == Byte.class) {
+        } else if (cls == Byte.class || cls == byte.class) {
             if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Byte) (byte) intValue.value();
             if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue)
                 return (T) (Byte) ((Double) dblValue.value()).byteValue();
@@ -336,7 +538,7 @@ public class RecMapper {
                 return (T) (Byte) ((Long) lngValue.value()).byteValue();
             if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Byte) bigValue.value().byteValue();
             throw new RecMapError("can't convert to short from " + ast.getClass().getSimpleName());
-        } else if (cls == Short.class) {
+        } else if (cls == Short.class || cls == short.class) {
             if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Short) (short) intValue.value();
             if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue)
                 return (T) (Short) ((Double) dblValue.value()).shortValue();
@@ -344,7 +546,7 @@ public class RecMapper {
                 return (T) (Short) ((Long) lngValue.value()).shortValue();
             if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Short) bigValue.value().shortValue();
             throw new RecMapError("can't convert to short from " + ast.getClass().getSimpleName());
-        } else if (cls == Integer.class) {
+        } else if (cls == Integer.class || cls == int.class) {
             if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Integer) intValue.value();
             if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue)
                 return (T) (Integer) ((Double) dblValue.value()).intValue();
@@ -352,7 +554,7 @@ public class RecMapper {
                 return (T) (Integer) ((Long) lngValue.value()).intValue();
             if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Integer) bigValue.value().intValue();
             throw new RecMapError("can't convert to int from " + ast.getClass().getSimpleName());
-        } else if (cls == Long.class) {
+        } else if (cls == Long.class || cls == long.class) {
             if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Long) (long) intValue.value();
             if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue)
                 return (T) (Long) ((Double) dblValue.value()).longValue();
@@ -366,21 +568,21 @@ public class RecMapper {
             if (ast instanceof Ast.NumberAst.LongAst<?> lngValue) return (T) BigInteger.valueOf(lngValue.value());
             if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) bigValue.value();
             throw new RecMapError("can't convert to BigInteger from " + ast.getClass().getSimpleName());
-        } else if (cls == Float.class) {
+        } else if (cls == Float.class || cls == float.class) {
             if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Float) (float) intValue.value();
             if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue) return (T) (Float) (float) dblValue.value();
             if (ast instanceof Ast.NumberAst.LongAst<?> lngValue)
                 return (T) (Float) ((Long) lngValue.value()).floatValue();
             if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Float) bigValue.value().floatValue();
             throw new RecMapError("can't convert to double from " + ast.getClass().getSimpleName());
-        } else if (cls == Double.class) {
+        } else if (cls == Double.class || cls == double.class) {
             if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Double) (double) intValue.value();
             if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue) return (T) (Double) dblValue.value();
             if (ast instanceof Ast.NumberAst.LongAst<?> lngValue)
                 return (T) (Double) ((Long) lngValue.value()).doubleValue();
             if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Double) bigValue.value().doubleValue();
             throw new RecMapError("can't convert to double from " + ast.getClass().getSimpleName());
-        } else if (cls == Character.class) {
+        } else if (cls == Character.class || cls == char.class) {
             if (ast instanceof Ast.StringAst<?> strValue) {
                 if (strValue.value().isEmpty())
                     throw new RecMapError("can't convert to char empty string");
@@ -390,6 +592,8 @@ public class RecMapper {
             throw new RecMapError("can't convert to char from " + ast.getClass().getSimpleName());
         } else if (cls.isSealed() && cls.isInterface()) {
             return parseSealedInterface(ast, cls);
+        } else if ( cls.isRecord() && ast instanceof Ast.ObjectAst<?> objAst ){
+            return parseRecord( objAst, cls );
         } else if (cls.isEnum()) {
             return parseEnum(ast, cls);
         }
@@ -419,6 +623,40 @@ public class RecMapper {
         }
     }
 
+    public record JsonToField(
+        RecordComponent recordComponent,
+        Ast.ObjectAst<?> objectAst,
+        String fieldName,
+        BiFunction<Ast<?>, Type, Result<Object, RecMapError>> valueParse
+    ) {
+        public JsonToField fieldName(String newName) {
+            if (newName == null) throw new IllegalArgumentException("newName==null");
+            return new JsonToField(recordComponent, objectAst, newName, valueParse);
+        }
+    }
+
+    public static final Function<JsonToField, Result<Object, RecMapError>> DefaultFieldDeserialization = jsonToField -> {
+        var fieldClass = jsonToField.recordComponent().getType();
+        var fieldIsOptional = fieldClass == Optional.class;
+        var fieldAstOpt = jsonToField.objectAst().get(jsonToField.fieldName());
+        if ((fieldAstOpt.isEmpty() || fieldAstOpt.map(a -> a instanceof Ast.NullAst<?>).orElse(false)) && fieldIsOptional)
+            return Result.ok(Optional.empty());
+
+        if (fieldAstOpt.isEmpty())
+            return Result.error(new RecMapError("expect field " + jsonToField.fieldName() + " in json"));
+        return jsonToField.valueParse().apply(fieldAstOpt.get(), jsonToField.recordComponent().getGenericType());
+    };
+
+    private Function<JsonToField, Result<Object, RecMapError>> fieldDeserialization = DefaultFieldDeserialization;
+
+    public Function<JsonToField, Result<Object, RecMapError>> fieldDeserialization() {return fieldDeserialization;}
+
+    public RecMapper fieldDeserialization(Function<JsonToField, Result<Object, RecMapError>> deserialization) {
+        if (deserialization == null) throw new IllegalArgumentException("deserialization==null");
+        fieldDeserialization = deserialization;
+        return this;
+    }
+
     private <T> T parseRecord(Ast.ObjectAst<?> objAst, Class<T> recordClass) {
         var recComponents = recordClass.getRecordComponents();
         var recComponentClasses = new Class<?>[recComponents.length];
@@ -432,14 +670,26 @@ public class RecMapper {
 
             var recType = recComponents[ri].getGenericType();
 
-            var valueAstOpt = objAst.get(name);
-            if ((valueAstOpt.isEmpty() || valueAstOpt.map(a -> a instanceof Ast.NullAst<?>).orElse(false)) && recClass == Optional.class) {
-                recValues[ri] = Optional.empty();
-                continue;
+            var jsonToField = new JsonToField(
+                recComponents[ri],
+                objAst,
+                name,
+                (ast, type) -> {
+                    try {
+                        return Result.ok(parse(ast, recType));
+                    } catch (RecMapError e) {
+                        return Result.error(e);
+                    }
+                }
+            );
+
+            var res = fieldDeserialization.apply(jsonToField);
+            if (res.isError()) {
+                //noinspection OptionalGetWithoutIsPresent
+                throw res.getError().get();
             }
 
-            if (valueAstOpt.isEmpty()) throw new RecMapError("expect field " + name + " in json");
-            recValues[ri] = parse(valueAstOpt.get(), recType);
+            recValues[ri] = res.unwrap();
         }
 
         try {

@@ -30,6 +30,18 @@ import java.util.Optional;
  */
 public sealed interface Ast<S extends CharPointer<S>> {
     /**
+     * Расположение начала в исходниках
+     * @return Расположение в исходниках
+     */
+    S sourceBegin();
+
+    /**
+     * Расположение конца в исходниках
+     * @return Расположение в исходниках
+     */
+    S sourceEnd();
+
+    /**
      * Попытка преобразовать к числу
      * @return число
      */
@@ -152,6 +164,20 @@ public sealed interface Ast<S extends CharPointer<S>> {
          * @param <S> Тип исходника
          */
         record MultiLine<S extends CharPointer<S>>(MLComment<S> token) implements Comment<S> {
+            public MultiLine {
+                if( token==null ) throw new IllegalArgumentException("token==null");
+            }
+
+            @Override
+            public S sourceBegin() {
+                return token.begin();
+            }
+
+            @Override
+            public S sourceEnd() {
+                return token.end();
+            }
+
             public static MultiLine<DummyCharPointer> create(String text) {
                 if (text == null) throw new IllegalArgumentException("text==null");
                 return new MultiLine<>(
@@ -167,6 +193,20 @@ public sealed interface Ast<S extends CharPointer<S>> {
          * @param <S> Тип исходника
          */
         record SingleLine<S extends CharPointer<S>>(SLComment<S> token) implements Comment<S> {
+            public SingleLine {
+                if( token==null ) throw new IllegalArgumentException("token==null");
+            }
+
+            @Override
+            public S sourceBegin() {
+                return token.begin();
+            }
+
+            @Override
+            public S sourceEnd() {
+                return token.end();
+            }
+
             public static SingleLine<DummyCharPointer> create(String text) {
                 if (text == null) throw new IllegalArgumentException("text==null");
                 return new SingleLine<>(new SLComment<>(text, DummyCharPointer.instance, DummyCharPointer.instance));
@@ -195,6 +235,20 @@ public sealed interface Ast<S extends CharPointer<S>> {
         record DoubleAst<S extends CharPointer<S>>(
             DoubleToken<S> token
         ) implements NumberAst<S> {
+            public DoubleAst {
+                if( token==null ) throw new IllegalArgumentException("token==null");
+            }
+
+            @Override
+            public S sourceBegin() {
+                return token.begin();
+            }
+
+            @Override
+            public S sourceEnd() {
+                return token.end();
+            }
+
             public static DoubleAst<DummyCharPointer> create(double value) {
                 return new DoubleAst<>(new DoubleToken<>(value, DummyCharPointer.instance, DummyCharPointer.instance));
             }
@@ -211,6 +265,20 @@ public sealed interface Ast<S extends CharPointer<S>> {
          * @param <S>
          */
         record IntAst<S extends CharPointer<S>>(IntToken<S> token) implements NumberAst<S> {
+            public IntAst {
+                if( token==null ) throw new IllegalArgumentException("token==null");
+            }
+
+            @Override
+            public S sourceBegin() {
+                return token.begin();
+            }
+
+            @Override
+            public S sourceEnd() {
+                return token.end();
+            }
+
             public static IntAst<DummyCharPointer> create(int value) {
                 return new IntAst<>(new IntToken<>(value, DummyCharPointer.instance, DummyCharPointer.instance));
             }
@@ -227,6 +295,20 @@ public sealed interface Ast<S extends CharPointer<S>> {
          * @param <S>
          */
         record LongAst<S extends CharPointer<S>>(LongToken<S> token) implements NumberAst<S> {
+            public LongAst {
+                if( token==null ) throw new IllegalArgumentException("token==null");
+            }
+
+            @Override
+            public S sourceBegin() {
+                return token.begin();
+            }
+
+            @Override
+            public S sourceEnd() {
+                return token.end();
+            }
+
             public static LongAst<DummyCharPointer> create(long value) {
                 return new LongAst<>(new LongToken<>(value, DummyCharPointer.instance, DummyCharPointer.instance));
             }
@@ -243,6 +325,20 @@ public sealed interface Ast<S extends CharPointer<S>> {
          * @param <S>
          */
         record BigIntAst<S extends CharPointer<S>>(BigIntToken<S> token) implements NumberAst<S> {
+            public BigIntAst {
+                if( token==null ) throw new IllegalArgumentException("token==null");
+            }
+
+            @Override
+            public S sourceBegin() {
+                return token.begin();
+            }
+
+            @Override
+            public S sourceEnd() {
+                return token.end();
+            }
+
             public static BigIntAst<DummyCharPointer> create(BigInteger value) {
                 if (value == null) throw new IllegalArgumentException("value==null");
                 return new BigIntAst<>(new BigIntToken<>(value, DummyCharPointer.instance, DummyCharPointer.instance));
@@ -269,6 +365,20 @@ public sealed interface Ast<S extends CharPointer<S>> {
          * @param <S>
          */
         record TrueAst<S extends CharPointer<S>>(TrueToken<S> token) implements BooleanAst<S> {
+            public TrueAst {
+                if( token==null ) throw new IllegalArgumentException("token==null");
+            }
+
+            @Override
+            public S sourceBegin() {
+                return token.begin();
+            }
+
+            @Override
+            public S sourceEnd() {
+                return token.end();
+            }
+
             public static TrueAst<DummyCharPointer> create() {
                 return new TrueAst<>(new TrueToken<>(DummyCharPointer.instance, DummyCharPointer.instance));
             }
@@ -281,6 +391,20 @@ public sealed interface Ast<S extends CharPointer<S>> {
          * @param <S>
          */
         record FalseAst<S extends CharPointer<S>>(FalseToken<S> token) implements BooleanAst<S> {
+            public FalseAst {
+                if( token==null ) throw new IllegalArgumentException("token==null");
+            }
+
+            @Override
+            public S sourceBegin() {
+                return token.begin();
+            }
+
+            @Override
+            public S sourceEnd() {
+                return token.end();
+            }
+
             public static FalseAst<DummyCharPointer> create() {
                 return new FalseAst<>(new FalseToken<>(DummyCharPointer.instance, DummyCharPointer.instance));
             }
@@ -303,6 +427,20 @@ public sealed interface Ast<S extends CharPointer<S>> {
      */
     record NullAst<S extends CharPointer<S>>(NullToken<S> token) implements Ast<S>,
                                                                             Primitive {
+        public NullAst {
+            if( token==null ) throw new IllegalArgumentException("token==null");
+        }
+
+        @Override
+        public S sourceBegin() {
+            return token.begin();
+        }
+
+        @Override
+        public S sourceEnd() {
+            return token.end();
+        }
+
         /**
          * Конструктор
          * @return значение
@@ -323,6 +461,16 @@ public sealed interface Ast<S extends CharPointer<S>> {
                                                                                 Key<S> {
         public StringAst {
             if (token == null) throw new IllegalArgumentException("token==null");
+        }
+
+        @Override
+        public S sourceBegin() {
+            return token.begin();
+        }
+
+        @Override
+        public S sourceEnd() {
+            return token.end();
         }
 
         /**
@@ -353,6 +501,20 @@ public sealed interface Ast<S extends CharPointer<S>> {
     record IdentAst<S extends CharPointer<S>>(IdentifierToken<S> token) implements Ast<S>,
                                                                                    Primitive,
                                                                                    Key<S> {
+        public IdentAst {
+            if( token==null ) throw new IllegalArgumentException("token==null");
+        }
+
+        @Override
+        public S sourceBegin() {
+            return token.begin();
+        }
+
+        @Override
+        public S sourceEnd() {
+            return token.end();
+        }
+
         public static IdentAst<DummyCharPointer> create(String value) {
             if (value == null) throw new IllegalArgumentException("value==null");
             return new IdentAst<>(new IdentifierToken<>(value, DummyCharPointer.instance, DummyCharPointer.instance));
@@ -382,7 +544,22 @@ public sealed interface Ast<S extends CharPointer<S>> {
      * @param value значение
      * @param <S> тип исходника
      */
-    record KeyValue<S extends CharPointer<S>>(Key<S> key, Ast<S> value) {
+    record KeyValue<S extends CharPointer<S>>(Key<S> key, Ast<S> value) implements Ast<S> {
+        public KeyValue {
+            if( key==null ) throw new IllegalArgumentException("key==null");
+            if( value==null ) throw new IllegalArgumentException("value==null");
+        }
+
+        @Override
+        public S sourceBegin() {
+            return key.sourceBegin();
+        }
+
+        @Override
+        public S sourceEnd() {
+            return value.sourceEnd();
+        }
+
         public static KeyValue<DummyCharPointer> create(Key<DummyCharPointer> key, Ast<DummyCharPointer> value) {
             if (key == null) throw new IllegalArgumentException("key==null");
             if (value == null) throw new IllegalArgumentException("value==null");
@@ -410,6 +587,22 @@ public sealed interface Ast<S extends CharPointer<S>> {
                 new OpenParentheses<>(DummyCharPointer.instance, DummyCharPointer.instance),
                 new CloseParentheses<>(DummyCharPointer.instance, DummyCharPointer.instance)
             );
+        }
+
+        public ObjectAst {
+            if( values==null ) throw new IllegalArgumentException("values==null");
+            if( begin==null ) throw new IllegalArgumentException("begin==null");
+            if( end==null ) throw new IllegalArgumentException("end==null");
+        }
+
+        @Override
+        public S sourceBegin() {
+            return begin.begin();
+        }
+
+        @Override
+        public S sourceEnd() {
+            return end.end();
         }
 
         /**
@@ -470,6 +663,22 @@ public sealed interface Ast<S extends CharPointer<S>> {
      */
     record ArrayAst<S extends CharPointer<S>>(
         ImList<Ast<S>> values, OpenSquare<S> begin, CloseSquare<S> end) implements Ast<S> {
+
+        public ArrayAst {
+            if( values==null ) throw new IllegalArgumentException("values==null");
+            if( begin==null ) throw new IllegalArgumentException("begin==null");
+            if( end==null ) throw new IllegalArgumentException("end==null");
+        }
+
+        @Override
+        public S sourceBegin() {
+            return begin.begin();
+        }
+
+        @Override
+        public S sourceEnd() {
+            return end.end();
+        }
 
         /**
          * Создание/конструктор
