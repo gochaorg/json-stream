@@ -314,6 +314,11 @@ public class RecMapper {
         return AstWriter.toString(toAst(record));
     }
 
+    public String toJson(Object record, boolean pretty){
+        if (record == null) throw new IllegalArgumentException("record==null");
+        return AstWriter.toString(toAst(record), pretty);
+    }
+
     /**
      * Кодирование поля Record
      *

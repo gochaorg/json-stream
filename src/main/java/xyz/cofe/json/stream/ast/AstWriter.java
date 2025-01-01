@@ -2,6 +2,7 @@ package xyz.cofe.json.stream.ast;
 
 import xyz.cofe.json.stream.token.Colon;
 import xyz.cofe.json.stream.token.Comma;
+import xyz.cofe.json.stream.token.IndentTokenWriter;
 import xyz.cofe.json.stream.token.SimpleTokenWriter;
 import xyz.cofe.json.stream.token.TokenWriter;
 
@@ -21,6 +22,21 @@ public class AstWriter {
         StringWriter sw = new StringWriter();
         SimpleTokenWriter tokenWriter = new SimpleTokenWriter(sw);
         write(tokenWriter, ast);
+        return sw.toString();
+    }
+
+    public static String toString(Ast<?> ast, boolean pretty){
+        if( ast==null ) throw new IllegalArgumentException("ast==null");
+        StringWriter sw = new StringWriter();
+        SimpleTokenWriter tokenWriter = new SimpleTokenWriter(sw);
+
+        if( pretty ) {
+            IndentTokenWriter iTW = new IndentTokenWriter(tokenWriter);
+            write(iTW, ast);
+        }else{
+            write(tokenWriter, ast);
+        }
+
         return sw.toString();
     }
 
