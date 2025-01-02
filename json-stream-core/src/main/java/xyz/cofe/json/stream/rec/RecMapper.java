@@ -513,6 +513,17 @@ public class RecMapper {
 
         return Optional.of(itemParse.apply(ast));
     }
+    
+    public <T> Result<T,RecMapError> tryParse(Ast<?> ast, Class<T> cls){
+        if( ast==null ) return Result.error(new RecMapError(new IllegalArgumentException("ast==null")));
+        if( cls==null ) return Result.error(new RecMapError(new IllegalArgumentException("cls==null")));
+
+        try {
+            return Result.ok(parse(ast,cls));
+        } catch (RecMapError e){
+            return Result.error(e);
+        }
+    }
 
     @SuppressWarnings("unchecked")
     public <T> T parse(Ast<?> ast, Class<T> cls) {

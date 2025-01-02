@@ -4,8 +4,8 @@ public class RecMapError extends Error {
     public RecMapError(String message) {
         super(message);
     }
-
     public RecMapError(String message, Throwable cause) {
         super(message, cause);
     }
+    public RecMapError(Throwable cause){ super(cause); }
 }
