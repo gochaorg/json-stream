@@ -231,6 +231,7 @@ public class RecMapper {
      * @param ser - функция ( value ) -> Optional &lt;Ast&gt; - если функция возвращает empty, то используется алгоритм по умолчанию
      * @return SELF ссылка
      */
+    @SuppressWarnings("UnusedReturnValue")
     public RecMapper customObjectSerialize(Function<Object, Optional<Ast<DummyCharPointer>>> ser) {
         if (ser == null) throw new IllegalArgumentException("ser==null");
         customObjectSerialize = ser;
@@ -314,7 +315,7 @@ public class RecMapper {
         return AstWriter.toString(toAst(record));
     }
 
-    public String toJson(Object record, boolean pretty){
+    public String toJson(Object record, boolean pretty) {
         if (record == null) throw new IllegalArgumentException("record==null");
         return AstWriter.toString(toAst(record), pretty);
     }
@@ -348,7 +349,7 @@ public class RecMapper {
     private Function<FieldToJson, Optional<Ast.KeyValue<DummyCharPointer>>> fieldSerialization
         = DefaultFieldSerialization;
 
-    public Function<FieldToJson, Optional<Ast.KeyValue<DummyCharPointer>>> fieldSerialization(){
+    public Function<FieldToJson, Optional<Ast.KeyValue<DummyCharPointer>>> fieldSerialization() {
         return fieldSerialization;
     }
 
@@ -417,78 +418,112 @@ public class RecMapper {
     }
     //endregion
 
-    @SuppressWarnings("unchecked")
+    public sealed interface ParseStack {
+        record parseAstType(Ast<?> ast, Type type) implements ParseStack {}
+        record parseStringType(String json, Type type) implements ParseStack {}
+        record imListParse<T>(Ast.ArrayAst<?> ast, BiFunction<Ast<?>, ImList<ParseStack>, T> itemParse)
+            implements ParseStack {}
+        record listParse<T>(Ast.ArrayAst<?> ast, BiFunction<Ast<?>, ImList<ParseStack>, T> itemParse)
+            implements ParseStack {}
+        record optionalParse<T>(Ast<?> ast, BiFunction<Ast<?>, ImList<ParseStack>, T> itemParse)
+            implements ParseStack {}
+        record tryParse<T>(Ast<?> ast, Class<T> cls) implements ParseStack {}
+        record parseAstClass<T>(Ast<?> ast, Class<T> cls) implements ParseStack {}
+        record parseSealedInterface<T>(Ast<?> ast, Class<T> cls) implements ParseStack {}
+        record parseSubclass<T>(Ast<?> ast, Class<T> subClass) implements ParseStack {}
+        record parseRecord<T>(Ast.ObjectAst<?> objAst, Class<T> recordClass) implements ParseStack {}
+        record parseEnum<T>(Ast<?> ast, Class<T> enumCls) implements ParseStack {}
+        record parserOf(Type type) implements ParseStack {}
+    }
+
     public <T> T parse(Ast<?> ast, Type type) {
+        return parse(ast, type, ImList.of());
+    }
+
+    @SuppressWarnings("unchecked")
+    protected <T> T parse(Ast<?> ast, Type type, ImList<ParseStack> stack) {
         if (ast == null) throw new IllegalArgumentException("ast==null");
         if (type == null) throw new IllegalArgumentException("type==null");
+
+        stack = stack.prepend(new ParseStack.parseAstType(ast, type));
+
         if (type instanceof Class<?> cls) {
-            return (T) parse(ast, cls);
+            return (T) parse(ast, cls, stack);
         }
 
-        var parser = parserOf(type);
+        var parser = parserOf(type, stack);
         if (parser.isPresent()) {
-            return (T) parser.get().apply(ast);
+            return (T) parser.get().apply(ast, stack);
         }
 
         throw new RecMapError("unsupported target type: " + type);
     }
 
     public <T> T parse(String json, Type type) {
+        return parse(json, type, ImList.of());
+    }
+
+    protected <T> T parse(String json, Type type, ImList<ParseStack> stack) {
         if (json == null) throw new IllegalArgumentException("json==null");
         if (type == null) throw new IllegalArgumentException("type==null");
 
+        stack = stack.prepend(new ParseStack.parseStringType(json, type));
+
         var jsnObj = AstParser.parse(json);
-        return parse(jsnObj, type);
+        return parse(jsnObj, type, stack);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private <T> Optional<Function<Ast<?>, T>> parserOf(Type type) {
+    private <T> Optional<BiFunction<Ast<?>, ImList<ParseStack>, T>> parserOf(Type type, ImList<ParseStack> stack) {
+        stack = stack.prepend(new ParseStack.parserOf(type));
+
         if (type instanceof Class<?> cls) {
-            return
-                Optional.of((Ast<?> ast) -> (T) parse(ast, cls));
+            return Optional.of(
+                (Ast<?> ast, ImList<ParseStack> stack1) -> (T) parse(ast, cls, stack1));
         }
 
         if (type instanceof ParameterizedType pt) {
             if (pt.getRawType() == ImList.class && pt.getActualTypeArguments().length == 1) {
-                var itemParserOpt = parserOf(pt.getActualTypeArguments()[0]);
+                var itemParserOpt = parserOf(pt.getActualTypeArguments()[0], stack);
                 if (itemParserOpt.isEmpty()) return Optional.empty();
 
-                Function itemParser = itemParserOpt.get();
-                Function parser = (ast) -> {
+                BiFunction itemParser = itemParserOpt.get();
+                BiFunction parser = (ast, stack1) -> {
                     if (!(ast instanceof Ast.ArrayAst arr)) {
-                        throw new RecMapError("expect json array (" + Ast.ArrayAst.class.getSimpleName() + "), actual: " + ast.getClass().getSimpleName());
+                        throw new RecMapParseError("expect json array (" + Ast.ArrayAst.class.getSimpleName() + "), actual: " + ast.getClass().getSimpleName(), (ImList<ParseStack>)stack1);
                     }
-                    return imListParse(arr, itemParser);
+
+                    return imListParse(arr, itemParser, (ImList<ParseStack>) stack1);
                 };
 
                 return Optional.of(parser);
             }
 
             if (pt.getRawType() == List.class && pt.getActualTypeArguments().length == 1) {
-                var itemParserOpt = parserOf(pt.getActualTypeArguments()[0]);
+                var itemParserOpt = parserOf(pt.getActualTypeArguments()[0], stack);
                 if (itemParserOpt.isEmpty()) return Optional.empty();
 
-                Function itemParser = itemParserOpt.get();
-                Function parser = (ast) -> {
+                BiFunction itemParser = itemParserOpt.get();
+                BiFunction parser = (ast, stack1) -> {
                     if (!(ast instanceof Ast.ArrayAst arr)) {
-                        throw new RecMapError("expect json array (" + Ast.ArrayAst.class.getSimpleName() + "), actual: " + ast.getClass().getSimpleName());
+                        throw new RecMapParseError("expect json array (" + Ast.ArrayAst.class.getSimpleName() + "), actual: " + ast.getClass().getSimpleName(), (ImList<ParseStack>)stack1);
                     }
-                    return listParse(arr, itemParser);
+                    return listParse(arr, itemParser, (ImList<ParseStack>) stack1);
                 };
 
                 return Optional.of(parser);
             }
 
             if (pt.getRawType() == Optional.class && pt.getActualTypeArguments().length == 1) {
-                var itemParserOpt = parserOf(pt.getActualTypeArguments()[0]);
+                var itemParserOpt = parserOf(pt.getActualTypeArguments()[0], stack);
                 if (itemParserOpt.isEmpty()) return Optional.empty();
 
-                Function itemParser = itemParserOpt.get();
-                Function parser = (ast) -> {
+                BiFunction itemParser = itemParserOpt.get();
+                BiFunction parser = (ast, stack1) -> {
                     if (!(ast instanceof Ast ast1)) {
-                        throw new RecMapError("expect json value, actual: " + ast.getClass().getSimpleName());
+                        throw new RecMapParseError("expect json value, actual: " + ast.getClass().getSimpleName(), (ImList<ParseStack>)stack1);
                     }
-                    return optionalParse(ast1, itemParser);
+                    return optionalParse(ast1, itemParser, (ImList<ParseStack>) stack1);
                 };
 
                 return Optional.of(parser);
@@ -498,37 +533,52 @@ public class RecMapper {
         return Optional.empty();
     }
 
-    private <T> ImList<T> imListParse(Ast.ArrayAst<?> ast, Function<Ast<?>, T> itemParse) {
-        return ast.values().map(itemParse::apply);
+    private <T> ImList<T> imListParse(Ast.ArrayAst<?> ast, BiFunction<Ast<?>, ImList<ParseStack>, T> itemParse, ImList<ParseStack> stack) {
+        var stack1 = stack.prepend(new ParseStack.imListParse<T>(ast, itemParse));
+        return ast.values().map(a -> itemParse.apply(a, stack1));
     }
 
-    private <T> List<T> listParse(Ast.ArrayAst<?> ast, Function<Ast<?>, T> itemParse) {
-        return ast.values().map(itemParse::apply).toList();
+    private <T> List<T> listParse(Ast.ArrayAst<?> ast, BiFunction<Ast<?>, ImList<ParseStack>, T> itemParse, ImList<ParseStack> stack) {
+        var stack1 = stack.prepend(new ParseStack.listParse<T>(ast, itemParse));
+        return ast.values().map(a -> itemParse.apply(a, stack1)).toList();
     }
 
-    private <T> Optional<T> optionalParse(Ast<?> ast, Function<Ast<?>, T> itemParse) {
+    private <T> Optional<T> optionalParse(Ast<?> ast, BiFunction<Ast<?>, ImList<ParseStack>, T> itemParse, ImList<ParseStack> stack) {
         if (ast instanceof Ast.NullAst<?> nullAst) {
             return Optional.empty();
         }
 
-        return Optional.of(itemParse.apply(ast));
+        var stack1 = stack.prepend(new ParseStack.optionalParse<T>(ast, itemParse));
+        return Optional.of(itemParse.apply(ast, stack1));
     }
-    
-    public <T> Result<T,RecMapError> tryParse(Ast<?> ast, Class<T> cls){
-        if( ast==null ) return Result.error(new RecMapError(new IllegalArgumentException("ast==null")));
-        if( cls==null ) return Result.error(new RecMapError(new IllegalArgumentException("cls==null")));
+
+    public <T> Result<T, RecMapError> tryParse(Ast<?> ast, Class<T> cls) {
+        return tryParse(ast, cls, ImList.of());
+    }
+
+    protected <T> Result<T, RecMapError> tryParse(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
+        stack = stack.prepend(new ParseStack.tryParse<T>(ast, cls));
+
+        if (ast == null) return Result.error(new RecMapParseError(new IllegalArgumentException("ast==null"),stack));
+        if (cls == null) return Result.error(new RecMapParseError(new IllegalArgumentException("cls==null"),stack));
 
         try {
-            return Result.ok(parse(ast,cls));
-        } catch (RecMapError e){
+            return Result.ok(parse(ast, cls, stack));
+        } catch (RecMapError e) {
             return Result.error(e);
         }
     }
 
-    @SuppressWarnings("unchecked")
     public <T> T parse(Ast<?> ast, Class<T> cls) {
+        return parse(ast, cls, ImList.of());
+    }
+
+    @SuppressWarnings("unchecked")
+    protected <T> T parse(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
         if (ast == null) throw new IllegalArgumentException("ast==null");
         if (cls == null) throw new IllegalArgumentException("cls==null");
+
+        stack = stack.prepend(new ParseStack.parseAstClass<T>(ast, cls));
 
         if (ast instanceof Ast.NullAst<?>) return null;
 
@@ -536,7 +586,7 @@ public class RecMapper {
             if (ast instanceof Ast.StringAst<?> str) {
                 return (T) str.value();
             } else {
-                throw new RecMapError("expect string in json");
+                throw new RecMapParseError("expect string in json", stack);
             }
         } else if (cls == Boolean.class || cls == boolean.class) {
             if (ast instanceof Ast.BooleanAst.TrueAst<?>) {
@@ -544,7 +594,7 @@ public class RecMapper {
             } else if (ast instanceof Ast.BooleanAst.FalseAst<?>) {
                 return (T) Boolean.FALSE;
             } else {
-                throw new RecMapError("expect boolean in json");
+                throw new RecMapParseError("expect boolean in json", stack);
             }
         } else if (cls == Byte.class || cls == byte.class) {
             if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Byte) (byte) intValue.value();
@@ -553,7 +603,7 @@ public class RecMapper {
             if (ast instanceof Ast.NumberAst.LongAst<?> lngValue)
                 return (T) (Byte) ((Long) lngValue.value()).byteValue();
             if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Byte) bigValue.value().byteValue();
-            throw new RecMapError("can't convert to short from " + ast.getClass().getSimpleName());
+            throw new RecMapParseError("can't convert to short from " + ast.getClass().getSimpleName(), stack);
         } else if (cls == Short.class || cls == short.class) {
             if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Short) (short) intValue.value();
             if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue)
@@ -561,7 +611,7 @@ public class RecMapper {
             if (ast instanceof Ast.NumberAst.LongAst<?> lngValue)
                 return (T) (Short) ((Long) lngValue.value()).shortValue();
             if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Short) bigValue.value().shortValue();
-            throw new RecMapError("can't convert to short from " + ast.getClass().getSimpleName());
+            throw new RecMapParseError("can't convert to short from " + ast.getClass().getSimpleName(), stack);
         } else if (cls == Integer.class || cls == int.class) {
             if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Integer) intValue.value();
             if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue)
@@ -569,73 +619,75 @@ public class RecMapper {
             if (ast instanceof Ast.NumberAst.LongAst<?> lngValue)
                 return (T) (Integer) ((Long) lngValue.value()).intValue();
             if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Integer) bigValue.value().intValue();
-            throw new RecMapError("can't convert to int from " + ast.getClass().getSimpleName());
+            throw new RecMapParseError("can't convert to int from " + ast.getClass().getSimpleName(), stack);
         } else if (cls == Long.class || cls == long.class) {
             if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Long) (long) intValue.value();
             if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue)
                 return (T) (Long) ((Double) dblValue.value()).longValue();
             if (ast instanceof Ast.NumberAst.LongAst<?> lngValue) return (T) (Long) lngValue.value();
             if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Long) bigValue.value().longValue();
-            throw new RecMapError("can't convert to long from " + ast.getClass().getSimpleName());
+            throw new RecMapParseError("can't convert to long from " + ast.getClass().getSimpleName(), stack);
         } else if (cls == BigInteger.class) {
             if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) BigInteger.valueOf(intValue.value());
             if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue)
                 return (T) BigInteger.valueOf(((long) dblValue.value()));
             if (ast instanceof Ast.NumberAst.LongAst<?> lngValue) return (T) BigInteger.valueOf(lngValue.value());
             if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) bigValue.value();
-            throw new RecMapError("can't convert to BigInteger from " + ast.getClass().getSimpleName());
+            throw new RecMapParseError("can't convert to BigInteger from " + ast.getClass().getSimpleName(), stack);
         } else if (cls == Float.class || cls == float.class) {
             if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Float) (float) intValue.value();
             if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue) return (T) (Float) (float) dblValue.value();
             if (ast instanceof Ast.NumberAst.LongAst<?> lngValue)
                 return (T) (Float) ((Long) lngValue.value()).floatValue();
             if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Float) bigValue.value().floatValue();
-            throw new RecMapError("can't convert to double from " + ast.getClass().getSimpleName());
+            throw new RecMapParseError("can't convert to double from " + ast.getClass().getSimpleName(), stack);
         } else if (cls == Double.class || cls == double.class) {
             if (ast instanceof Ast.NumberAst.IntAst<?> intValue) return (T) (Double) (double) intValue.value();
             if (ast instanceof Ast.NumberAst.DoubleAst<?> dblValue) return (T) (Double) dblValue.value();
             if (ast instanceof Ast.NumberAst.LongAst<?> lngValue)
                 return (T) (Double) ((Long) lngValue.value()).doubleValue();
             if (ast instanceof Ast.NumberAst.BigIntAst<?> bigValue) return (T) (Double) bigValue.value().doubleValue();
-            throw new RecMapError("can't convert to double from " + ast.getClass().getSimpleName());
+            throw new RecMapParseError("can't convert to double from " + ast.getClass().getSimpleName(), stack);
         } else if (cls == Character.class || cls == char.class) {
             if (ast instanceof Ast.StringAst<?> strValue) {
                 if (strValue.value().isEmpty())
-                    throw new RecMapError("can't convert to char empty string");
+                    throw new RecMapParseError("can't convert to char empty string", stack);
 
                 return (T) (Character) strValue.value().charAt(0);
             }
-            throw new RecMapError("can't convert to char from " + ast.getClass().getSimpleName());
+            throw new RecMapParseError("can't convert to char from " + ast.getClass().getSimpleName(), stack);
         } else if (cls.isSealed() && cls.isInterface()) {
-            return parseSealedInterface(ast, cls);
-        } else if ( cls.isRecord() && ast instanceof Ast.ObjectAst<?> objAst ){
-            return parseRecord( objAst, cls );
+            return parseSealedInterface(ast, cls, stack);
+        } else if (cls.isRecord() && ast instanceof Ast.ObjectAst<?> objAst) {
+            return parseRecord(objAst, cls, stack);
         } else if (cls.isEnum()) {
-            return parseEnum(ast, cls);
+            return parseEnum(ast, cls, stack);
         }
 
-        throw new RecMapError("unsupported " + cls);
+        throw new RecMapParseError("unsupported " + cls, stack);
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T parseSealedInterface(Ast<?> ast, Class<T> cls) {
+    private <T> T parseSealedInterface(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
+        var stack1 = stack.prepend(new ParseStack.parseSealedInterface<T>(ast, cls));
         return subClassResolver.resolve(ast, cls.getPermittedSubclasses()).fold(
-            resolved -> (T) parseSubclass(resolved.body(), resolved.klass()),
+            resolved -> (T) parseSubclass(resolved.body(), resolved.klass(), stack1),
             err -> {
-                throw new RecMapError(err);
+                throw new RecMapParseError(err, stack1);
             }
         );
     }
 
-    private <T> T parseSubclass(Ast<?> ast, Class<T> subClass) {
+    private <T> T parseSubclass(Ast<?> ast, Class<T> subClass, ImList<ParseStack> stack) {
+        stack = stack.prepend(new ParseStack.parseSubclass<T>(ast, subClass));
         if (ast instanceof Ast.ObjectAst<?> objAst) {
             if (subClass.isRecord()) {
-                return parseRecord(objAst, subClass);
+                return parseRecord(objAst, subClass, stack);
             } else {
-                throw new RecMapError("expect " + subClass + " is record");
+                throw new RecMapParseError("expect " + subClass + " is record", stack);
             }
         } else {
-            throw new RecMapError("expect Ast.ObjectAst");
+            throw new RecMapParseError("expect Ast.ObjectAst", stack);
         }
     }
 
@@ -673,7 +725,9 @@ public class RecMapper {
         return this;
     }
 
-    private <T> T parseRecord(Ast.ObjectAst<?> objAst, Class<T> recordClass) {
+    private <T> T parseRecord(Ast.ObjectAst<?> objAst, Class<T> recordClass, ImList<ParseStack> stack) {
+        var stack1 = stack.prepend(new ParseStack.parseRecord<T>(objAst, recordClass));
+
         var recComponents = recordClass.getRecordComponents();
         var recComponentClasses = new Class<?>[recComponents.length];
         var recValues = new Object[recComponents.length];
@@ -692,7 +746,7 @@ public class RecMapper {
                 name,
                 (ast, type) -> {
                     try {
-                        return Result.ok(parse(ast, recType));
+                        return Result.ok(parse(ast, recType, stack1));
                     } catch (RecMapError e) {
                         return Result.error(e);
                     }
@@ -713,11 +767,13 @@ public class RecMapper {
             return ctor.newInstance(recValues);
         } catch (NoSuchMethodException | InstantiationException | IllegalAccessException |
                  InvocationTargetException e) {
-            throw new RecMapError("can't create instance of " + recordClass, e);
+            throw new RecMapParseError("can't create instance of " + recordClass, e, stack);
         }
     }
 
-    private <T> T parseEnum(Ast<?> ast, Class<T> enumCls) {
+    private <T> T parseEnum(Ast<?> ast, Class<T> enumCls, ImList<ParseStack> stack) {
+        stack = stack.prepend(new ParseStack.parseEnum<T>(ast, enumCls));
+
         if (ast instanceof Ast.StringAst<?> strAst) {
             var enumConsts = enumCls.getEnumConstants();
             for (var enumConst : enumConsts) {
@@ -725,8 +781,19 @@ public class RecMapper {
                     return enumConst;
                 }
             }
-            throw new RecMapError("can't convert to enum (" + enumCls + ") from \"" + strAst.value() + "\", expect " + Arrays.stream(enumConsts).map(e -> ((Enum<?>) e).name()).reduce("", (sum, it) -> sum.isBlank() ? it : sum + ", " + it));
+
+            throw new RecMapParseError(
+                "can't convert to enum (" + enumCls +
+                    ") from \"" + strAst.value() +
+                    "\", expect " +
+                    Arrays.stream(enumConsts).map(
+                        e -> ((Enum<?>) e).name()).reduce(
+                        "", (sum, it) -> sum.isBlank() ? it : sum + ", " + it
+                    ),
+                stack
+            );
         }
-        throw new RecMapError("can't convert to enum (" + enumCls + ") from " + ast.getClass().getSimpleName());
+
+        throw new RecMapParseError("can't convert to enum (" + enumCls + ") from " + ast.getClass().getSimpleName(), stack);
     }
 }

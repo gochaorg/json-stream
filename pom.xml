@@ -19,26 +19,25 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <dependencies>
-        <dependency>
-            <groupId>xyz.cofe</groupId>
-            <artifactId>coll-im</artifactId>
-            <version>4.1-SNAPSHOT</version>
-        </dependency>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>xyz.cofe</groupId>
+                <artifactId>coll-im</artifactId>
+            </dependency>
 
-        <dependency>
-            <groupId>xyz.cofe</groupId>
-            <artifactId>htree-rec</artifactId>
-            <version>4.0</version>
-        </dependency>
+            <dependency>
+                <groupId>xyz.cofe</groupId>
+                <artifactId>htree-rec</artifactId>
+            </dependency>
 
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <version>5.9.2</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-engine</artifactId>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <plugins>
