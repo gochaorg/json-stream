@@ -344,6 +344,16 @@ public class RecMapper {
             if (name == null) throw new IllegalArgumentException("name==null");
             return new FieldToJson(record, recordClass, name, fieldValue, recordComponent, keyMapper, valueMapper);
         }
+
+        public FieldToJson keyMapper(Function<String, Ast.Key<DummyCharPointer>> keyMapper){
+            if( keyMapper==null ) throw new IllegalArgumentException("keyMapper==null");
+            return new FieldToJson(record, recordClass, fieldName, fieldValue, recordComponent, keyMapper, valueMapper);
+        }
+
+        public FieldToJson valueMapper(Function<Object, Ast<DummyCharPointer>> valueMapper){
+            if( keyMapper==null ) throw new IllegalArgumentException("keyMapper==null");
+            return new FieldToJson(record, recordClass, fieldName, fieldValue, recordComponent, keyMapper, valueMapper);
+        }
     }
 
     private Function<FieldToJson, Optional<Ast.KeyValue<DummyCharPointer>>> fieldSerialization
@@ -761,7 +771,12 @@ public class RecMapper {
         }
 
         if (fieldAstOpt.isEmpty()) {
-            return Result.error(new RecMapError("expect field " + jsonToField.fieldName() + " in json"));
+            return Result.error(
+                new RecMapParseError(
+                    "expect field " + jsonToField.fieldName() + " in json",
+                    jsonToField.stack
+                )
+            );
         }
 
         return jsonToField.valueParse().apply(
