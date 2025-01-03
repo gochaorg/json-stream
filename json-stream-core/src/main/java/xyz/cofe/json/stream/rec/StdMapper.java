@@ -20,6 +20,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import static xyz.cofe.coll.im.Result.ok;
+
 public class StdMapper extends RecMapper {
     public StdMapper() {
         this(true);
@@ -34,20 +36,37 @@ public class StdMapper extends RecMapper {
     }
 
     public record FieldReadConfig(
-
+        ImList<Function<JsonToField, Result<JsonToField, RecMapError>>> override
     ) {}
+
+    private final Map<String, FieldReadConfig> fieldsReadConfig = new HashMap<>();
 
     public final Result<Object, RecMapError> stdFieldDeserilizer(JsonToField jsonToField) {
         if (jsonToField == null) return Result.error(new RecMapError("illegal argument: jsonToField == null"));
+
+        var fieldConf = fieldsReadConfig.get(fieldIdOf(jsonToField.recordComponent()));
+        if( fieldConf!=null ){
+            for( var ovr : fieldConf.override ){
+                var j2fRes = ovr.apply(jsonToField);
+                if( j2fRes.isError() ) {
+                    //noinspection OptionalGetWithoutIsPresent
+                    return Result.error(j2fRes.getError().get());
+                }
+
+                jsonToField = j2fRes.unwrap();
+            }
+        }
 
         var dser = deserializers.get(jsonToField.recordComponent().getType());
         if (dser != null) {
             var fieldAstOpt = jsonToField.objectAst().get(jsonToField.fieldName());
 
+            var jsonToField1 = jsonToField;
+
             if (fieldAstOpt.isEmpty()) {
                 return Result.from(
                     dser.defaultValue,
-                    () -> new RecMapError("can't fetch default value for " + jsonToField)
+                    () -> new RecMapError("can't fetch default value for " + jsonToField1)
                 ).map(Supplier::get);
             }
 
@@ -57,12 +76,55 @@ public class StdMapper extends RecMapper {
         return DefaultFieldDeserialization.apply(jsonToField);
     }
 
+    public FieldDeserialize fieldDeserialize(Class<?> recordType, String fieldName){
+        if( recordType==null ) throw new IllegalArgumentException("recordType==null");
+        if( fieldName==null ) throw new IllegalArgumentException("fieldName==null");
+
+        return new FieldDeserialize(recordType.getName(), fieldName);
+    }
+
+    public class FieldDeserialize {
+        private final String classOwner;
+        private final String fieldName;
+
+        public FieldDeserialize(String classOwner, String fieldName) {
+            if( classOwner==null ) throw new IllegalArgumentException("classOwner==null");
+            if( fieldName==null ) throw new IllegalArgumentException("fieldName==null");
+            this.classOwner = classOwner;
+            this.fieldName = fieldName;
+        }
+
+        private ImList<Function<JsonToField, Result<JsonToField, RecMapError>>> conf = ImList.of();
+
+        public FieldDeserialize name(String firstName, String ... secondNames){
+            if( firstName==null ) throw new IllegalArgumentException("firstName==null");
+            if( secondNames==null ) throw new IllegalArgumentException("secondNames==null");
+
+            ImList<String> names = ImList.of(secondNames).prepend(firstName);
+            conf = conf.prepend( jsonToField -> {
+                var keys = jsonToField.objectAst().values().map(kv -> kv.key().value());
+                var prefKey = keys.find(names::contains);
+                if(prefKey.isPresent()){
+                    jsonToField = jsonToField.fieldName(prefKey.get());
+                }
+                return ok(jsonToField);
+            });
+
+            return this;
+        }
+
+        public StdMapper append(){
+            fieldsReadConfig.put(fieldIdOf(classOwner,fieldName), new FieldReadConfig(conf.reverse()));
+            return StdMapper.this;
+        }
+    }
+
     //region field serialize
     public record FieldWriteConfig(
         ImList<Function<FieldToJson, Optional<FieldToJson>>> override
     ) {}
 
-    private final Map<String, FieldWriteConfig> fieldsConfig = new HashMap<>();
+    private final Map<String, FieldWriteConfig> fieldsWriteConfig = new HashMap<>();
 
     {
         fieldSerialization(this::stdFieldSerialization);
@@ -82,7 +144,8 @@ public class StdMapper extends RecMapper {
     public final Optional<Ast.KeyValue<DummyCharPointer>> stdFieldSerialization(FieldToJson fieldToJson) {
         if (fieldToJson == null) throw new RecMapToAstError(new IllegalArgumentException("fieldToJson==null"));
 
-        var fconf = fieldsConfig.get(fieldIdOf(fieldToJson.recordComponent()));
+        var fId = fieldIdOf(fieldToJson.recordComponent());
+        var fconf = fieldsWriteConfig.get(fId);
         if (fconf == null) return DefaultFieldSerialization.apply(fieldToJson);
 
         for (var ovr : fconf.override()) {
@@ -144,7 +207,7 @@ public class StdMapper extends RecMapper {
         }
 
         public StdMapper append() {
-            fieldsConfig.put(
+            fieldsWriteConfig.put(
                 fieldIdOf(classOwner, fieldName),
                 new FieldWriteConfig(conf.reverse())
             );

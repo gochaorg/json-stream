@@ -1,5 +1,6 @@
 package xyz.cofe.json.stream.rec;
 
+import xyz.cofe.coll.im.Fn3;
 import xyz.cofe.coll.im.ImList;
 import xyz.cofe.coll.im.Result;
 import xyz.cofe.json.stream.ast.Ast;
@@ -750,7 +751,7 @@ public class RecMapper {
         RecordComponent recordComponent,
         Ast.ObjectAst<?> objectAst,
         String fieldName,
-        BiFunction<Ast<?>, Type, Result<Object, RecMapError>> valueParse,
+        Fn3<Ast<?>, Type, ImList<ParseStack>, Result<Object, RecMapError>> valueParse,
         ImList<ParseStack> stack
     ) {
         public JsonToField fieldName(String newName) {
@@ -781,7 +782,8 @@ public class RecMapper {
 
         return jsonToField.valueParse().apply(
             fieldAstOpt.get(),
-            jsonToField.recordComponent().getGenericType()
+            jsonToField.recordComponent().getGenericType(),
+            jsonToField.stack
         );
     };
 
@@ -814,9 +816,9 @@ public class RecMapper {
                 recComponents[ri],
                 objAst,
                 name,
-                (ast, type) -> {
+                (ast, type, stack2) -> {
                     try {
-                        return Result.ok(parse(ast, recType, stack1));
+                        return Result.ok(parse(ast, recType, stack2));
                     } catch (RecMapError e) {
                         return Result.error(e);
                     }
