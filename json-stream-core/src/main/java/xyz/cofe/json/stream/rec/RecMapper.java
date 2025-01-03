@@ -418,6 +418,10 @@ public class RecMapper {
     }
     //endregion
 
+    //region parsing part
+    /**
+     * Стек парсера
+     */
     public sealed interface ParseStack {
         record parseAstType(Ast<?> ast, Type type) implements ParseStack {}
         record parseStringType(String json, Type type) implements ParseStack {}
@@ -436,6 +440,13 @@ public class RecMapper {
         record parserOf(Type type) implements ParseStack {}
     }
 
+    /**
+     * Парсинг ast
+     * @param ast узел ast
+     * @param type Целевой тип данных
+     * @return целевой тип данных
+     * @param <T> результат парсинга
+     */
     public <T> T parse(Ast<?> ast, Type type) {
         return parse(ast, type, ImList.of());
     }
@@ -459,6 +470,13 @@ public class RecMapper {
         throw new RecMapError("unsupported target type: " + type);
     }
 
+    /**
+     * Парсинг json
+     * @param json строка json
+     * @param type целевой тип
+     * @return результат парсинга
+     * @param <T> результат парсинга
+     */
     public <T> T parse(String json, Type type) {
         return parse(json, type, ImList.of());
     }
@@ -474,7 +492,7 @@ public class RecMapper {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private <T> Optional<BiFunction<Ast<?>, ImList<ParseStack>, T>> parserOf(Type type, ImList<ParseStack> stack) {
+    protected <T> Optional<BiFunction<Ast<?>, ImList<ParseStack>, T>> parserOf(Type type, ImList<ParseStack> stack) {
         stack = stack.prepend(new ParseStack.parserOf(type));
 
         if (type instanceof Class<?> cls) {
@@ -533,17 +551,17 @@ public class RecMapper {
         return Optional.empty();
     }
 
-    private <T> ImList<T> imListParse(Ast.ArrayAst<?> ast, BiFunction<Ast<?>, ImList<ParseStack>, T> itemParse, ImList<ParseStack> stack) {
+    protected <T> ImList<T> imListParse(Ast.ArrayAst<?> ast, BiFunction<Ast<?>, ImList<ParseStack>, T> itemParse, ImList<ParseStack> stack) {
         var stack1 = stack.prepend(new ParseStack.imListParse<T>(ast, itemParse));
         return ast.values().map(a -> itemParse.apply(a, stack1));
     }
 
-    private <T> List<T> listParse(Ast.ArrayAst<?> ast, BiFunction<Ast<?>, ImList<ParseStack>, T> itemParse, ImList<ParseStack> stack) {
+    protected <T> List<T> listParse(Ast.ArrayAst<?> ast, BiFunction<Ast<?>, ImList<ParseStack>, T> itemParse, ImList<ParseStack> stack) {
         var stack1 = stack.prepend(new ParseStack.listParse<T>(ast, itemParse));
         return ast.values().map(a -> itemParse.apply(a, stack1)).toList();
     }
 
-    private <T> Optional<T> optionalParse(Ast<?> ast, BiFunction<Ast<?>, ImList<ParseStack>, T> itemParse, ImList<ParseStack> stack) {
+    protected <T> Optional<T> optionalParse(Ast<?> ast, BiFunction<Ast<?>, ImList<ParseStack>, T> itemParse, ImList<ParseStack> stack) {
         if (ast instanceof Ast.NullAst<?> nullAst) {
             return Optional.empty();
         }
@@ -552,6 +570,13 @@ public class RecMapper {
         return Optional.of(itemParse.apply(ast, stack1));
     }
 
+    /**
+     * Парсинг ast
+     * @param ast json ast дерево
+     * @param cls целевой тип
+     * @return результат парсинга
+     * @param <T> целевой тип
+     */
     public <T> Result<T, RecMapError> tryParse(Ast<?> ast, Class<T> cls) {
         return tryParse(ast, cls, ImList.of());
     }
@@ -569,6 +594,13 @@ public class RecMapper {
         }
     }
 
+    /**
+     * Парсинг ast
+     * @param ast json ast дерево
+     * @param cls целевой тип
+     * @return результат парсинга
+     * @param <T> целевой тип
+     */
     public <T> T parse(Ast<?> ast, Class<T> cls) {
         return parse(ast, cls, ImList.of());
     }
@@ -691,6 +723,13 @@ public class RecMapper {
         }
     }
 
+    /**
+     * Парсинг ast в поле record
+     * @param recordComponent Компонент record
+     * @param objectAst ast дерево, json object соответствующий record
+     * @param fieldName имя поля в record
+     * @param valueParse функция парсинга по умолчанию
+     */
     public record JsonToField(
         RecordComponent recordComponent,
         Ast.ObjectAst<?> objectAst,
@@ -796,4 +835,5 @@ public class RecMapper {
 
         throw new RecMapParseError("can't convert to enum (" + enumCls + ") from " + ast.getClass().getSimpleName(), stack);
     }
+    //endregion
 }
