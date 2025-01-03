@@ -442,10 +442,11 @@ public class RecMapper {
 
     /**
      * Парсинг ast
-     * @param ast узел ast
+     *
+     * @param ast  узел ast
      * @param type Целевой тип данных
+     * @param <T>  результат парсинга
      * @return целевой тип данных
-     * @param <T> результат парсинга
      */
     public <T> T parse(Ast<?> ast, Type type) {
         return parse(ast, type, ImList.of());
@@ -472,10 +473,11 @@ public class RecMapper {
 
     /**
      * Парсинг json
+     *
      * @param json строка json
      * @param type целевой тип
+     * @param <T>  результат парсинга
      * @return результат парсинга
-     * @param <T> результат парсинга
      */
     public <T> T parse(String json, Type type) {
         return parse(json, type, ImList.of());
@@ -508,7 +510,7 @@ public class RecMapper {
                 BiFunction itemParser = itemParserOpt.get();
                 BiFunction parser = (ast, stack1) -> {
                     if (!(ast instanceof Ast.ArrayAst arr)) {
-                        throw new RecMapParseError("expect json array (" + Ast.ArrayAst.class.getSimpleName() + "), actual: " + ast.getClass().getSimpleName(), (ImList<ParseStack>)stack1);
+                        throw new RecMapParseError("expect json array (" + Ast.ArrayAst.class.getSimpleName() + "), actual: " + ast.getClass().getSimpleName(), (ImList<ParseStack>) stack1);
                     }
 
                     return imListParse(arr, itemParser, (ImList<ParseStack>) stack1);
@@ -524,7 +526,7 @@ public class RecMapper {
                 BiFunction itemParser = itemParserOpt.get();
                 BiFunction parser = (ast, stack1) -> {
                     if (!(ast instanceof Ast.ArrayAst arr)) {
-                        throw new RecMapParseError("expect json array (" + Ast.ArrayAst.class.getSimpleName() + "), actual: " + ast.getClass().getSimpleName(), (ImList<ParseStack>)stack1);
+                        throw new RecMapParseError("expect json array (" + Ast.ArrayAst.class.getSimpleName() + "), actual: " + ast.getClass().getSimpleName(), (ImList<ParseStack>) stack1);
                     }
                     return listParse(arr, itemParser, (ImList<ParseStack>) stack1);
                 };
@@ -539,7 +541,7 @@ public class RecMapper {
                 BiFunction itemParser = itemParserOpt.get();
                 BiFunction parser = (ast, stack1) -> {
                     if (!(ast instanceof Ast ast1)) {
-                        throw new RecMapParseError("expect json value, actual: " + ast.getClass().getSimpleName(), (ImList<ParseStack>)stack1);
+                        throw new RecMapParseError("expect json value, actual: " + ast.getClass().getSimpleName(), (ImList<ParseStack>) stack1);
                     }
                     return optionalParse(ast1, itemParser, (ImList<ParseStack>) stack1);
                 };
@@ -572,10 +574,11 @@ public class RecMapper {
 
     /**
      * Парсинг ast
+     *
      * @param ast json ast дерево
      * @param cls целевой тип
-     * @return результат парсинга
      * @param <T> целевой тип
+     * @return результат парсинга
      */
     public <T> Result<T, RecMapError> tryParse(Ast<?> ast, Class<T> cls) {
         return tryParse(ast, cls, ImList.of());
@@ -584,8 +587,8 @@ public class RecMapper {
     protected <T> Result<T, RecMapError> tryParse(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
         stack = stack.prepend(new ParseStack.tryParse<T>(ast, cls));
 
-        if (ast == null) return Result.error(new RecMapParseError(new IllegalArgumentException("ast==null"),stack));
-        if (cls == null) return Result.error(new RecMapParseError(new IllegalArgumentException("cls==null"),stack));
+        if (ast == null) return Result.error(new RecMapParseError(new IllegalArgumentException("ast==null"), stack));
+        if (cls == null) return Result.error(new RecMapParseError(new IllegalArgumentException("cls==null"), stack));
 
         try {
             return Result.ok(parse(ast, cls, stack));
@@ -596,10 +599,11 @@ public class RecMapper {
 
     /**
      * Парсинг ast
+     *
      * @param ast json ast дерево
      * @param cls целевой тип
-     * @return результат парсинга
      * @param <T> целевой тип
+     * @return результат парсинга
      */
     public <T> T parse(Ast<?> ast, Class<T> cls) {
         return parse(ast, cls, ImList.of());
@@ -725,20 +729,23 @@ public class RecMapper {
 
     /**
      * Парсинг ast в поле record
+     *
      * @param recordComponent Компонент record
-     * @param objectAst ast дерево, json object соответствующий record
-     * @param fieldName имя поля в record
-     * @param valueParse функция парсинга по умолчанию
+     * @param objectAst       ast дерево, json object соответствующий record
+     * @param fieldName       имя поля в record
+     * @param valueParse      функция парсинга по умолчанию
+     * @param stack           Стек парсера
      */
     public record JsonToField(
         RecordComponent recordComponent,
         Ast.ObjectAst<?> objectAst,
         String fieldName,
-        BiFunction<Ast<?>, Type, Result<Object, RecMapError>> valueParse
+        BiFunction<Ast<?>, Type, Result<Object, RecMapError>> valueParse,
+        ImList<ParseStack> stack
     ) {
         public JsonToField fieldName(String newName) {
             if (newName == null) throw new IllegalArgumentException("newName==null");
-            return new JsonToField(recordComponent, objectAst, newName, valueParse);
+            return new JsonToField(recordComponent, objectAst, newName, valueParse, stack);
         }
     }
 
@@ -746,12 +753,21 @@ public class RecMapper {
         var fieldClass = jsonToField.recordComponent().getType();
         var fieldIsOptional = fieldClass == Optional.class;
         var fieldAstOpt = jsonToField.objectAst().get(jsonToField.fieldName());
-        if ((fieldAstOpt.isEmpty() || fieldAstOpt.map(a -> a instanceof Ast.NullAst<?>).orElse(false)) && fieldIsOptional)
-            return Result.ok(Optional.empty());
 
-        if (fieldAstOpt.isEmpty())
+        if ((fieldAstOpt.isEmpty() || fieldAstOpt.map(a -> a instanceof Ast.NullAst<?>).orElse(false))
+            && fieldIsOptional
+        ) {
+            return Result.ok(Optional.empty());
+        }
+
+        if (fieldAstOpt.isEmpty()) {
             return Result.error(new RecMapError("expect field " + jsonToField.fieldName() + " in json"));
-        return jsonToField.valueParse().apply(fieldAstOpt.get(), jsonToField.recordComponent().getGenericType());
+        }
+
+        return jsonToField.valueParse().apply(
+            fieldAstOpt.get(),
+            jsonToField.recordComponent().getGenericType()
+        );
     };
 
     private Function<JsonToField, Result<Object, RecMapError>> fieldDeserialization = DefaultFieldDeserialization;
@@ -789,7 +805,8 @@ public class RecMapper {
                     } catch (RecMapError e) {
                         return Result.error(e);
                     }
-                }
+                },
+                stack1
             );
 
             var res = fieldDeserialization.apply(jsonToField);

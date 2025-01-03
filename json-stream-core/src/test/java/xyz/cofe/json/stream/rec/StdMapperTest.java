@@ -23,7 +23,7 @@ public class StdMapperTest {
             .append(ldt -> Optional.of(mapper.toAst(ldt.toString())));
 
         mapper.deserializeFor(LocalDateTime.class)
-            .append(ast ->
+            .append((ast,stack) ->
                 mapper.tryParse(ast, String.class)
                     .fmap( str -> {
                         try {

@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -141,7 +142,7 @@ public class StdMapper extends RecMapper {
 
     public record CustomDeserializer(
         Class<?> klass,
-        Function<Ast<?>, Result<Object, RecMapError>> deserializer,
+        BiFunction<Ast<?>, ImList<RecMapper.ParseStack>, Result<Object, RecMapError>> deserializer,
         Optional<Supplier<Object>> defaultValue
     ) {}
 
@@ -158,7 +159,7 @@ public class StdMapper extends RecMapper {
                 ).map(Supplier::get);
             }
 
-            return dser.deserializer.apply(fieldAstOpt.get());
+            return dser.deserializer.apply(fieldAstOpt.get(), jsonToField.stack());
         }
 
         return DefaultFieldDeserialization.apply(jsonToField);
@@ -184,10 +185,11 @@ public class StdMapper extends RecMapper {
             return this;
         }
 
-        public StdMapper append(Function<Ast<?>, Result<T,RecMapError>> deserializer){
+        public StdMapper append(BiFunction<Ast<?>, ImList<RecMapper.ParseStack>, Result<T,RecMapError>> deserializer){
+            //noinspection unchecked,rawtypes
             var dser = new CustomDeserializer(
                 deserializedClass,
-                (Function)deserializer,
+                (BiFunction)deserializer,
                 defaultValue);
 
             deserializers.put(deserializedClass, dser);
