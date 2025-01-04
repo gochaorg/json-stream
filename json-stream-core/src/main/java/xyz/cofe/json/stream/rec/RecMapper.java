@@ -688,7 +688,7 @@ public class RecMapper {
         }
     }
 
-    public static final Function<JsonToField, Result<Object, RecMapError>> DefaultFieldDeserialization = jsonToField -> {
+    protected Result<Object,RecMapError> fieldDeserialization(JsonToField jsonToField){
         var fieldClass = jsonToField.recordComponent().getType();
         var fieldIsOptional = fieldClass == Optional.class;
         var fieldAstOpt = jsonToField.objectAst().get(jsonToField.fieldName());
@@ -713,16 +713,6 @@ public class RecMapper {
             jsonToField.recordComponent().getGenericType(),
             jsonToField.stack
         );
-    };
-
-    private Function<JsonToField, Result<Object, RecMapError>> fieldDeserialization = DefaultFieldDeserialization;
-
-    public Function<JsonToField, Result<Object, RecMapError>> fieldDeserialization() {return fieldDeserialization;}
-
-    public RecMapper fieldDeserialization(Function<JsonToField, Result<Object, RecMapError>> deserialization) {
-        if (deserialization == null) throw new IllegalArgumentException("deserialization==null");
-        fieldDeserialization = deserialization;
-        return this;
     }
 
     private <T> T parseRecord(Ast.ObjectAst<?> objAst, Class<T> recordClass, ImList<ParseStack> stack) {
@@ -754,7 +744,7 @@ public class RecMapper {
                 stack1
             );
 
-            var res = fieldDeserialization.apply(jsonToField);
+            var res = fieldDeserialization(jsonToField);
             if (res.isError()) {
                 //noinspection OptionalGetWithoutIsPresent
                 throw res.getError().get();

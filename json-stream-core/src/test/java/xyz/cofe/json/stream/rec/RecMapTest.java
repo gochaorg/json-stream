@@ -231,13 +231,15 @@ public class RecMapTest {
 
     @Test
     public void restoreDefaultFieldSerialization() {
-        RecMapper mapper = new RecMapper();
-        mapper.fieldDeserialization(fld ->
-            fld.fieldName().equals("a") && fld.recordComponent().getDeclaringRecord() == NodeB.class
-                && fld.objectAst().get("a").isEmpty()
-                ? Result.ok("aa")
-                : RecMapper.DefaultFieldDeserialization.apply(fld)
-        );
+        RecMapper mapper = new RecMapper(){
+            @Override
+            protected Result<Object, RecMapError> fieldDeserialization(JsonToField fld) {
+                return
+                    fld.fieldName().equals("a") && fld.recordComponent().getDeclaringRecord() == NodeB.class
+                    ? Result.ok("aa")
+                    : super.fieldDeserialization(fld);
+            }
+        };
 
         Node node = mapper.parse(
             """
@@ -283,12 +285,15 @@ public class RecMapTest {
             {"NodeC":{"b":1,"cc":{"NodeA":{}}}}
             """;
 
-        RecMapper mapper = new RecMapper()
-            .fieldDeserialization(jsonToField ->
-                jsonToField.recordComponent().getName().equals("c") && jsonToField.recordComponent().getDeclaringRecord() == NodeC.class
-                    ? RecMapper.DefaultFieldDeserialization.apply(jsonToField.fieldName("cc"))
-                    : RecMapper.DefaultFieldDeserialization.apply(jsonToField)
-            );
+        RecMapper mapper = new RecMapper(){
+            @Override
+            protected Result<Object, RecMapError> fieldDeserialization(JsonToField jsonToField) {
+                return
+                    jsonToField.recordComponent().getName().equals("c") && jsonToField.recordComponent().getDeclaringRecord() == NodeC.class
+                    ? super.fieldDeserialization(jsonToField.fieldName("cc"))
+                    : super.fieldDeserialization(jsonToField);
+            }
+        };
 
         Node node = mapper.parse(json, Node.class);
         System.out.println(node);
@@ -311,16 +316,18 @@ public class RecMapTest {
                     ? Optional.of(toAst(ld.toString()))
                     : Optional.empty();
             }
+
+            @Override
+            protected Result<Object, RecMapError> fieldDeserialization(JsonToField fld) {
+                return
+                    fld.recordComponent().getType() == LocalDateTime.class && fld.recordComponent().getDeclaringRecord() == Custom.class
+                    ? Result.from(fld.objectAst().get("date"), () -> new RecMapError("aa")).map(a -> parse(a, String.class)).map(LocalDateTime::parse)
+                    : super.fieldDeserialization(fld);
+            }
         };
 
         String json = mapper.toJson(src);
         System.out.println(json);
-
-        mapper.fieldDeserialization(fld ->
-            fld.recordComponent().getType() == LocalDateTime.class && fld.recordComponent().getDeclaringRecord() == Custom.class
-                ? Result.from(fld.objectAst().get("date"), () -> new RecMapError("aa")).map(a -> mapper.parse(a, String.class)).map(LocalDateTime::parse)
-                : RecMapper.DefaultFieldDeserialization.apply(fld)
-        );
 
         Custom restored = mapper.parse(json, Custom.class);
         System.out.println(restored);

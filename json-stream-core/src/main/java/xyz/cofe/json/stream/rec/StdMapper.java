@@ -41,7 +41,8 @@ public class StdMapper extends RecMapper {
 
     private final Map<String, FieldReadConfig> fieldsReadConfig = new HashMap<>();
 
-    public final Result<Object, RecMapError> stdFieldDeserilizer(JsonToField jsonToField) {
+    @Override
+    public Result<Object, RecMapError> fieldDeserialization(JsonToField jsonToField) {
         if (jsonToField == null) return Result.error(new RecMapError("illegal argument: jsonToField == null"));
 
         var fieldConf = fieldsReadConfig.get(fieldIdOf(jsonToField.recordComponent()));
@@ -73,7 +74,7 @@ public class StdMapper extends RecMapper {
             return dser.deserializer.apply(fieldAstOpt.get(), jsonToField.stack());
         }
 
-        return DefaultFieldDeserialization.apply(jsonToField);
+        return super.fieldDeserialization(jsonToField);
     }
 
     public FieldDeserialize fieldDeserialize(Class<?> recordType, String fieldName){
@@ -321,10 +322,6 @@ public class StdMapper extends RecMapper {
     //endregion
 
     //region custom deserialize
-    {
-        fieldDeserialization(this::stdFieldDeserilizer);
-    }
-
     protected Map<Class<?>, CustomDeserializer> deserializers = new HashMap<>();
 
     public record CustomDeserializer(
