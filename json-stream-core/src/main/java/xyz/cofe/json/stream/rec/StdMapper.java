@@ -126,10 +126,6 @@ public class StdMapper extends RecMapper {
 
     private final Map<String, FieldWriteConfig> fieldsWriteConfig = new HashMap<>();
 
-    {
-        fieldSerialization(this::stdFieldSerialization);
-    }
-
     private String fieldIdOf(RecordComponent recordComponent) {
         return fieldIdOf(
             recordComponent.getDeclaringRecord().getName(),
@@ -141,21 +137,22 @@ public class StdMapper extends RecMapper {
         return classOwner + "/" + fieldName;
     }
 
-    public final Optional<Ast.KeyValue<DummyCharPointer>> stdFieldSerialization(FieldToJson fieldToJson) {
+    @Override
+    protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fieldToJson) {
         if (fieldToJson == null) throw new RecMapToAstError(new IllegalArgumentException("fieldToJson==null"));
 
         var fId = fieldIdOf(fieldToJson.recordComponent());
         var fconf = fieldsWriteConfig.get(fId);
-        if (fconf == null) return DefaultFieldSerialization.apply(fieldToJson);
+        if (fconf == null) return super.fieldSerialization(fieldToJson);
 
         for (var ovr : fconf.override()) {
             var f2jOpt = ovr.apply(fieldToJson);
-            if (f2jOpt.isEmpty()) return Optional.empty();
+            if (f2jOpt.isEmpty()) return ImList.of();
 
             fieldToJson = f2jOpt.get();
         }
 
-        return DefaultFieldSerialization.apply(fieldToJson);
+        return super.fieldSerialization(fieldToJson);
     }
 
     public FieldSerialize1 fieldSerialize(Class<?> recordType, String fieldName) {
@@ -226,13 +223,10 @@ public class StdMapper extends RecMapper {
     protected Map<Class<?>, CustomSerializer> serializers = new HashMap<>();
     protected Map<Class<?>, CustomSerializer> genericSerializers = new HashMap<>();
 
-    {
-        customObjectSerialize(this::stdCustomSerializer);
-    }
-
     protected Set<Class<?>> defaultSerializer = new HashSet<>();
 
-    public final Optional<Ast<DummyCharPointer>> stdCustomSerializer(Object someObj) {
+    @Override
+    protected Optional<Ast<DummyCharPointer>> customObjectSerialize(Object someObj) {
         if (someObj == null) return Optional.empty();
 
         var cls = someObj.getClass();

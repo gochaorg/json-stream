@@ -3,9 +3,11 @@ package xyz.cofe.json.stream.rec;
 import org.junit.jupiter.api.Test;
 import xyz.cofe.coll.im.ImList;
 import xyz.cofe.coll.im.Result;
+import xyz.cofe.json.stream.ast.Ast;
 import xyz.cofe.json.stream.ast.AstParser;
 import xyz.cofe.json.stream.ast.AstWriter;
 import xyz.cofe.json.stream.query.QuerySetFin;
+import xyz.cofe.json.stream.token.DummyCharPointer;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -48,7 +50,6 @@ public class RecMapTest {
         var node = mapper.parse(ast, Node.class);
         System.out.println(node);
     }
-
 
     @Test
     public void typeProperty() {
@@ -204,12 +205,15 @@ public class RecMapTest {
 
     @Test
     public void skipFieldSerialization() {
-        RecMapper mapper = new RecMapper();
-        mapper.fieldSerialization(fld ->
-            fld.fieldName().equals("c") && fld.recordClass() == NodeC.class
-                ? Optional.empty()
-                : RecMapper.DefaultFieldSerialization.apply(fld)
-        );
+        RecMapper mapper = new RecMapper() {
+            @Override
+            protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fld) {
+                return
+                    fld.fieldName().equals("c") && fld.recordClass() == NodeC.class
+                        ? ImList.of()
+                        : super.fieldSerialization(fld);
+            }
+        };
 
         var src = new NodeC(1, new NodeA());
 
@@ -238,22 +242,26 @@ public class RecMapTest {
         Node node = mapper.parse(
             """
                 { "NodeB": {} }
-                """,Node.class);
+                """, Node.class);
 
         assertTrue(node instanceof NodeB);
-        NodeB nb = (NodeB)node;
+        NodeB nb = (NodeB) node;
 
         assertTrue(nb.a().equals("aa"));
     }
 
     @Test
     public void renameFieldSerialization() {
-        RecMapper mapper = new RecMapper();
-        mapper.fieldSerialization(fld ->
-            fld.fieldName().equals("c") && fld.recordClass() == NodeC.class
-                ? RecMapper.DefaultFieldSerialization.apply(fld.fieldName("cc"))
-                : RecMapper.DefaultFieldSerialization.apply(fld)
-        );
+        RecMapper mapper = new RecMapper() {
+            @Override
+            protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fld) {
+                return super.fieldSerialization(
+                    fld.fieldName().equals("c") && fld.recordClass() == NodeC.class
+                        ? fld.fieldName("cc")
+                        : fld
+                );
+            }
+        };
 
         var src = new NodeC(1, new NodeA());
 
@@ -287,32 +295,34 @@ public class RecMapTest {
         assertTrue(node instanceof NodeC);
     }
 
-    public record Custom(LocalDateTime date, long num){
+    public record Custom(LocalDateTime date, long num) {
     }
 
     @Test
-    public void customSerialize(){
+    public void customSerialize() {
         var src = new Custom(LocalDateTime.now(), 12345);
-        RecMapper mapper = new RecMapper();
-
-        mapper.customObjectSerialize( obj ->
-            obj instanceof LocalDateTime ld
-                ? Optional.of(mapper.toAst(ld.toString()))
-//                : obj instanceof Long lng
-//                ? Optional.of(mapper.toAst(lng.toString()))
-                : Optional.empty()
-        );
+        RecMapper mapper = new RecMapper(
+            SubClassWriter.defaultWriter,
+            SubClassResolver.defaultResolver()
+        ) {
+            @Override
+            protected Optional<Ast<DummyCharPointer>> customObjectSerialize(Object obj) {
+                return obj instanceof LocalDateTime ld
+                    ? Optional.of(toAst(ld.toString()))
+                    : Optional.empty();
+            }
+        };
 
         String json = mapper.toJson(src);
         System.out.println(json);
 
-        mapper.fieldDeserialization( fld ->
-            fld.recordComponent().getType()== LocalDateTime.class && fld.recordComponent().getDeclaringRecord()==Custom.class
-                ? Result.from(fld.objectAst().get("date"),()->new RecMapError("aa")).map(a -> mapper.parse(a,String.class)).map(LocalDateTime::parse)
+        mapper.fieldDeserialization(fld ->
+            fld.recordComponent().getType() == LocalDateTime.class && fld.recordComponent().getDeclaringRecord() == Custom.class
+                ? Result.from(fld.objectAst().get("date"), () -> new RecMapError("aa")).map(a -> mapper.parse(a, String.class)).map(LocalDateTime::parse)
                 : RecMapper.DefaultFieldDeserialization.apply(fld)
-            );
+        );
 
-        Custom restored = mapper.parse(json,Custom.class);
+        Custom restored = mapper.parse(json, Custom.class);
         System.out.println(restored);
 
         assertTrue(restored.date.toEpochSecond(ZoneOffset.UTC) == src.date.toEpochSecond(ZoneOffset.UTC));

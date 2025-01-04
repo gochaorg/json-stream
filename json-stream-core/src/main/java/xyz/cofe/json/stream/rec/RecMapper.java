@@ -180,36 +180,9 @@ public class RecMapper {
     //endregion
 
     //region toAst() containers
-
-    private Function<Object, Optional<Ast<DummyCharPointer>>> customObjectSerialize = DefaultObjectSerialize;
-
-    /**
-     * Указывает собственный способ кодирования
-     *
-     * @return собственный способ кодирования
-     */
-    public Function<Object, Optional<Ast<DummyCharPointer>>> customObjectSerialize() {
-        return customObjectSerialize;
+    protected Optional<Ast<DummyCharPointer>> customObjectSerialize(Object record){
+        return Optional.empty();
     }
-
-    /**
-     * Указывает собственный способ кодирования
-     *
-     * @param ser - функция ( value ) -> Optional &lt;Ast&gt; - если функция возвращает empty, то используется алгоритм по умолчанию
-     * @return SELF ссылка
-     */
-    @SuppressWarnings("UnusedReturnValue")
-    public RecMapper customObjectSerialize(Function<Object, Optional<Ast<DummyCharPointer>>> ser) {
-        if (ser == null) throw new IllegalArgumentException("ser==null");
-        customObjectSerialize = ser;
-        return this;
-    }
-
-    /**
-     * Собственный способ кодирования по умолчанию (empty)
-     */
-    public static final Function<Object, Optional<Ast<DummyCharPointer>>> DefaultObjectSerialize
-        = obj -> Optional.empty();
 
     /**
      * Формирование Ast
@@ -218,7 +191,7 @@ public class RecMapper {
      * @return узел ast
      */
     public Ast<DummyCharPointer> toAst(Object record) {
-        var custom = customObjectSerialize.apply(record);
+        var custom = customObjectSerialize(record);
         if (custom.isPresent()) {
             return custom.get();
         }
@@ -323,24 +296,10 @@ public class RecMapper {
         }
     }
 
-    private Function<FieldToJson, Optional<Ast.KeyValue<DummyCharPointer>>> fieldSerialization
-        = DefaultFieldSerialization;
-
-    public Function<FieldToJson, Optional<Ast.KeyValue<DummyCharPointer>>> fieldSerialization() {
-        return fieldSerialization;
-    }
-
-    @SuppressWarnings("UnusedReturnValue")
-    public RecMapper fieldSerialization(Function<FieldToJson, Optional<Ast.KeyValue<DummyCharPointer>>> serialization) {
-        if (serialization == null) throw new IllegalArgumentException("serialization==null");
-        fieldSerialization = serialization;
-        return this;
-    }
-
     @SuppressWarnings({"unused", "OptionalGetWithoutIsPresent"})
-    public static final Function<FieldToJson, Optional<Ast.KeyValue<DummyCharPointer>>> DefaultFieldSerialization = fieldToJson -> {
-        if (fieldToJson.fieldValue() == null) return Optional.empty();
-        if (fieldToJson.fieldValue() instanceof Optional<?> opt && opt.isEmpty()) return Optional.empty();
+    protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fieldToJson){
+        if (fieldToJson.fieldValue() == null) return ImList.of();
+        if (fieldToJson.fieldValue() instanceof Optional<?> opt && opt.isEmpty()) return ImList.of();
 
         var recJsonValue =
             fieldToJson
@@ -349,8 +308,8 @@ public class RecMapper {
 
         var recJsonName = fieldToJson.keyMapper.apply(fieldToJson.fieldName());
 
-        return Optional.of(Ast.KeyValue.create(recJsonName, recJsonValue));
-    };
+        return ImList.of(Ast.KeyValue.create(recJsonName, recJsonValue));
+    }
 
     private Ast<DummyCharPointer> recordToAst(Object record, Class<?> cls) {
         var items = ImList.<Ast.KeyValue<DummyCharPointer>>of();
@@ -359,19 +318,22 @@ public class RecMapper {
             try {
                 var recValue = recCmpt.getAccessor().invoke(record);
 
-                var f2j = fieldSerialization.apply(new FieldToJson(
+                var f2j = fieldSerialization(new FieldToJson(
                     record, cls, recName, recValue, recCmpt, this::toAst, this::toAst
                 ));
+
                 if (f2j.isEmpty()) continue;
-                items = items.prepend(f2j.get());
+                items = items.append(f2j);
             } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new RecMapError("can't read record component " + recName, e);
             }
         }
 
-        var body = Ast.ObjectAst.create(items.reverse());
-
-        return subClassWriter.write(body, record, this);
+        return subClassWriter.write(
+            Ast.ObjectAst.create(items),
+            record,
+            this
+        );
     }
 
     private Ast<DummyCharPointer> iterableToAst(Iterable<?> iterable) {
