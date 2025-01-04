@@ -52,11 +52,11 @@ public class RecMapTest {
 
     @Test
     public void typeProperty() {
-        RecMapper mapper = new RecMapper();
         var propName = "@type";
-        mapper
-            .subClassResolver(SubClassResolver.typeProperty(propName))
-            .subClassWriter(SubClassWriter.typeProperty(propName));
+        RecMapper mapper = new RecMapper(
+            SubClassWriter.typeProperty(propName),
+            SubClassResolver.typeProperty(propName)
+        );
 
         var ast = mapper.toAst(new NodeB("abc"));
         var json = AstWriter.toString(ast);

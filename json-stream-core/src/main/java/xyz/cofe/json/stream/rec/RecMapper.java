@@ -24,66 +24,32 @@ import java.util.function.Function;
  * Сериализация sealed типов
  */
 public class RecMapper {
-    //region subClassWriter : SubClassWriter
-    private SubClassWriter subClassWriter;
+    /** Указывает способ указания подтипа */
+    private final SubClassWriter subClassWriter;
 
-    {
-        subClassWriter = SubClassWriter.defaultWriter;
+    /** Способ получения имени/типа экземпляра */
+    private final SubClassResolver subClassResolver;
+
+    public RecMapper(){
+        this.subClassWriter = SubClassWriter.defaultWriter;
+        this.subClassResolver = SubClassResolver.defaultResolver();
     }
 
     /**
-     * Указывает способ указания подтипа
-     *
-     * @return способ указания подтипа
+     * Конструктор
+     * @param subClassWriter - способ указания подтипа
+     * @param subClassResolver - способ получения имени/типа экземпляра
      */
-    @SuppressWarnings("UnusedReturnValue")
-    public SubClassWriter subClassWriter() {
-        return subClassWriter;
-    }
-
-    /**
-     * Указывает способ указания подтипа
-     *
-     * @param subClassWriter способ указания подтипа
-     * @return SELF ссылка
-     */
-    @SuppressWarnings("UnusedReturnValue")
-    public RecMapper subClassWriter(SubClassWriter subClassWriter) {
-        if (subClassWriter == null) throw new IllegalArgumentException("subClassWriter==null");
+    public RecMapper(
+        SubClassWriter subClassWriter,
+        SubClassResolver subClassResolver
+    ){
+        if( subClassWriter==null ) throw new IllegalArgumentException("subClassWriter==null");
         this.subClassWriter = subClassWriter;
-        return this;
-    }
-    //endregion
 
-    //region subClassResolver : SubClassResolver
-    private SubClassResolver subClassResolver;
-
-    {
-        subClassResolver = SubClassResolver.defaultResolver();
-    }
-
-    /**
-     * Указывает способ получения имени/типа экземпляра
-     *
-     * @return резолвинг подтипа
-     */
-    @SuppressWarnings("UnusedReturnValue")
-    public SubClassResolver subClassResolver() {
-        return subClassResolver;
-    }
-
-    /**
-     * Указывает способ получения имени/типа экземпляра
-     *
-     * @return резолвинг подтипа
-     */
-    @SuppressWarnings("UnusedReturnValue")
-    public RecMapper subClassResolver(SubClassResolver subClassResolver) {
-        if (subClassResolver == null) throw new IllegalArgumentException("subClassResolver==null");
+        if( subClassResolver==null ) throw new IllegalArgumentException("subClassResolver==null");
         this.subClassResolver = subClassResolver;
-        return this;
     }
-    //endregion
 
     //region toAst() primitives
 
