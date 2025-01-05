@@ -1,7 +1,9 @@
-package xyz.cofe.json.stream.rec;
+package xyz.cofe.json.stream.rec.test;
 
 import org.junit.jupiter.api.Test;
 import xyz.cofe.json.stream.ast.AstWriter;
+import xyz.cofe.json.stream.rec.RecMapError;
+import xyz.cofe.json.stream.rec.StdMapper;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;

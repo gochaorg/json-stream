@@ -5,10 +5,12 @@ import xyz.cofe.coll.im.Result;
 import xyz.cofe.coll.im.iter.Tree;
 import xyz.cofe.coll.im.iter.TreePath;
 import xyz.cofe.json.stream.ast.Ast;
-import xyz.cofe.json.stream.rec.spi.StdMapperProvider;
+import xyz.cofe.json.stream.rec.spi.StdMapperAdHocConfig;
+import xyz.cofe.json.stream.rec.spi.StdMapperConfigure;
 import xyz.cofe.json.stream.token.DummyCharPointer;
 
 import java.lang.reflect.RecordComponent;
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -23,18 +25,73 @@ import java.util.function.Supplier;
 import static xyz.cofe.coll.im.Result.ok;
 
 public class StdMapper extends RecMapper {
+    protected final ImList<StdMapperAdHocConfig> adHocConfigs;
+
     public StdMapper() {
         this(true);
     }
 
     public StdMapper(boolean withPlugins) {
         if (withPlugins) {
-            for (StdMapperProvider provider : ServiceLoader.load(StdMapperProvider.class)) {
+            for (StdMapperConfigure provider : ServiceLoader.load(StdMapperConfigure.class)) {
                 provider.configure(this);
             }
+            adHocConfigs = ImList.from(ServiceLoader.load(StdMapperAdHocConfig.class));
+        } else {
+            adHocConfigs = ImList.of();
         }
     }
 
+    //region ad hoc
+    protected final Set<Class<?>> alreadyConfiguredClasses = new HashSet<>();
+    protected final Set<Type> alreadyConfiguredTypes = new HashSet<>();
+
+    protected void adHoc(Object obj){
+        if( obj==null || adHocConfigs.isEmpty() )return;
+        adHoc(obj.getClass());
+    }
+    protected void adHoc(Type type){
+        if( type==null || adHocConfigs.isEmpty() )return;
+        if( type instanceof Class<?> cls ){
+            adHoc(cls);
+        }else{
+            if(!alreadyConfiguredTypes.contains(type)){
+                alreadyConfiguredTypes.add(type);
+                adHocConfigs.each(conf -> conf.configure(this, type));
+            }
+        }
+    }
+    protected void adHoc(Class<?> cls){
+        if( cls==null || adHocConfigs.isEmpty() )return;
+        if (!alreadyConfiguredClasses.contains(cls)) {
+            alreadyConfiguredClasses.add(cls);
+            adHocConfigs.each(conf -> conf.configure(this, cls));
+        }
+    }
+
+    @Override
+    public Ast<DummyCharPointer> toAst(Object record) {
+        if (record != null ) adHoc(record.getClass());
+        return super.toAst(record);
+    }
+
+    @Override
+    protected <T> T parse(Ast<?> ast, Type type, ImList<ParseStack> stack) {
+        adHoc(type);
+        return super.parse(ast, type, stack);
+    }
+
+    @Override
+    protected <T> Optional<BiFunction<Ast<?>, ImList<ParseStack>, T>> parserOf(Type type, ImList<ParseStack> stack) {
+        adHoc(type);
+        return super.parserOf(type, stack);
+    }
+    //endregion
+
+    //region field serialize
+    public record FieldWriteConfig(
+        ImList<Function<FieldToJson, Optional<FieldToJson>>> override
+    ) {}
     public record FieldReadConfig(
         ImList<Function<JsonToField, Result<JsonToField, RecMapError>>> override
     ) {}
@@ -42,14 +99,14 @@ public class StdMapper extends RecMapper {
     private final Map<String, FieldReadConfig> fieldsReadConfig = new HashMap<>();
 
     @Override
-    public Result<Object, RecMapError> fieldDeserialization(JsonToField jsonToField) {
+    protected Result<Object, RecMapError> fieldDeserialization(JsonToField jsonToField) {
         if (jsonToField == null) return Result.error(new RecMapError("illegal argument: jsonToField == null"));
 
         var fieldConf = fieldsReadConfig.get(fieldIdOf(jsonToField.recordComponent()));
-        if( fieldConf!=null ){
-            for( var ovr : fieldConf.override ){
+        if (fieldConf != null) {
+            for (var ovr : fieldConf.override) {
                 var j2fRes = ovr.apply(jsonToField);
-                if( j2fRes.isError() ) {
+                if (j2fRes.isError()) {
                     //noinspection OptionalGetWithoutIsPresent
                     return Result.error(j2fRes.getError().get());
                 }
@@ -77,9 +134,9 @@ public class StdMapper extends RecMapper {
         return super.fieldDeserialization(jsonToField);
     }
 
-    public FieldDeserialize fieldDeserialize(Class<?> recordType, String fieldName){
-        if( recordType==null ) throw new IllegalArgumentException("recordType==null");
-        if( fieldName==null ) throw new IllegalArgumentException("fieldName==null");
+    public FieldDeserialize fieldDeserialize(Class<?> recordType, String fieldName) {
+        if (recordType == null) throw new IllegalArgumentException("recordType==null");
+        if (fieldName == null) throw new IllegalArgumentException("fieldName==null");
 
         return new FieldDeserialize(recordType.getName(), fieldName);
     }
@@ -89,23 +146,23 @@ public class StdMapper extends RecMapper {
         private final String fieldName;
 
         public FieldDeserialize(String classOwner, String fieldName) {
-            if( classOwner==null ) throw new IllegalArgumentException("classOwner==null");
-            if( fieldName==null ) throw new IllegalArgumentException("fieldName==null");
+            if (classOwner == null) throw new IllegalArgumentException("classOwner==null");
+            if (fieldName == null) throw new IllegalArgumentException("fieldName==null");
             this.classOwner = classOwner;
             this.fieldName = fieldName;
         }
 
         private ImList<Function<JsonToField, Result<JsonToField, RecMapError>>> conf = ImList.of();
 
-        public FieldDeserialize name(String firstName, String ... secondNames){
-            if( firstName==null ) throw new IllegalArgumentException("firstName==null");
-            if( secondNames==null ) throw new IllegalArgumentException("secondNames==null");
+        public FieldDeserialize name(String firstName, String... secondNames) {
+            if (firstName == null) throw new IllegalArgumentException("firstName==null");
+            if (secondNames == null) throw new IllegalArgumentException("secondNames==null");
 
             ImList<String> names = ImList.of(secondNames).prepend(firstName);
-            conf = conf.prepend( jsonToField -> {
+            conf = conf.prepend(jsonToField -> {
                 var keys = jsonToField.objectAst().values().map(kv -> kv.key().value());
                 var prefKey = keys.find(names::contains);
-                if(prefKey.isPresent()){
+                if (prefKey.isPresent()) {
                     jsonToField = jsonToField.fieldName(prefKey.get());
                 }
                 return ok(jsonToField);
@@ -114,16 +171,11 @@ public class StdMapper extends RecMapper {
             return this;
         }
 
-        public StdMapper append(){
-            fieldsReadConfig.put(fieldIdOf(classOwner,fieldName), new FieldReadConfig(conf.reverse()));
+        public StdMapper append() {
+            fieldsReadConfig.put(fieldIdOf(classOwner, fieldName), new FieldReadConfig(conf.reverse()));
             return StdMapper.this;
         }
     }
-
-    //region field serialize
-    public record FieldWriteConfig(
-        ImList<Function<FieldToJson, Optional<FieldToJson>>> override
-    ) {}
 
     private final Map<String, FieldWriteConfig> fieldsWriteConfig = new HashMap<>();
 
@@ -141,6 +193,8 @@ public class StdMapper extends RecMapper {
     @Override
     protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fieldToJson) {
         if (fieldToJson == null) throw new RecMapToAstError(new IllegalArgumentException("fieldToJson==null"));
+        adHoc(fieldToJson.recordClass());
+        adHoc(fieldToJson.recordComponent().getGenericType());
 
         var fId = fieldIdOf(fieldToJson.recordComponent());
         var fconf = fieldsWriteConfig.get(fId);
@@ -199,7 +253,7 @@ public class StdMapper extends RecMapper {
         }
 
         public FieldSerialize1 keyMapper(Function<String, Ast.Key<DummyCharPointer>> keyMapper) {
-            if( keyMapper==null ) throw new IllegalArgumentException("keyMapper==null");
+            if (keyMapper == null) throw new IllegalArgumentException("keyMapper==null");
             conf = conf.prepend(f2j -> Optional.of(f2j.keyMapper(keyMapper)));
             return this;
         }
