@@ -523,7 +523,7 @@ public class RecMapper {
         return tryParse(ast, cls, ImList.of());
     }
 
-    protected <T> Result<T, RecMapError> tryParse(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
+    public <T> Result<T, RecMapError> tryParse(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
         stack = stack.prepend(new ParseStack.tryParse<T>(ast, cls));
 
         if (ast == null) return Result.error(new RecMapParseError(new IllegalArgumentException("ast==null"), stack));
@@ -549,7 +549,7 @@ public class RecMapper {
     }
 
     @SuppressWarnings("unchecked")
-    protected <T> T parse(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
+    public <T> T parse(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
         if (ast == null) throw new IllegalArgumentException("ast==null");
         if (cls == null) throw new IllegalArgumentException("cls==null");
 
