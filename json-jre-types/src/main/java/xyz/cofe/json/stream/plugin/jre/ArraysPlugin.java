@@ -1,7 +1,6 @@
 package xyz.cofe.json.stream.plugin.jre;
 
 import xyz.cofe.coll.im.Fn1;
-import xyz.cofe.coll.im.Result;
 import xyz.cofe.json.stream.rec.RecMapParseError;
 import xyz.cofe.json.stream.rec.StdMapper;
 import xyz.cofe.json.stream.rec.spi.StdMapperConfigure;
