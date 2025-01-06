@@ -88,7 +88,7 @@ public class StdMapper extends RecMapper {
     }
     //endregion
 
-    //region field serialize
+    //region field (de)serialize
     public record FieldWriteConfig(
         ImList<Function<FieldToJson, Optional<FieldToJson>>> override
     ) {}
@@ -118,14 +118,23 @@ public class StdMapper extends RecMapper {
         var dser = deserializers.get(jsonToField.recordComponent().getType());
         if (dser != null) {
             var fieldAstOpt = jsonToField.objectAst().get(jsonToField.fieldName());
-
-            var jsonToField1 = jsonToField;
+            var fieldClass = jsonToField.recordComponent().getType();
+            var fieldIsOptional = fieldClass == Optional.class;
 
             if (fieldAstOpt.isEmpty()) {
+                if( fieldIsOptional ){
+                    return ok(Optional.empty());
+                }
+
+                var jsonToField1 = jsonToField;
                 return Result.from(
                     dser.defaultValue,
                     () -> new RecMapError("can't fetch default value for " + jsonToField1)
                 ).map(Supplier::get);
+            }
+
+            if( fieldIsOptional && fieldAstOpt.map(a -> a instanceof Ast.NullAst<?>).orElse(false) ){
+                return ok(Optional.empty());
             }
 
             return dser.deserializer.apply(fieldAstOpt.get(), jsonToField.stack());
@@ -379,7 +388,6 @@ public class StdMapper extends RecMapper {
     protected Map<Class<?>, CustomDeserializer> deserializers = new HashMap<>();
 
     public record CustomDeserializer(
-        Class<?> klass,
         BiFunction<Ast<?>, ImList<RecMapper.ParseStack>, Result<Object, RecMapError>> deserializer,
         Optional<Supplier<Object>> defaultValue
     ) {}
@@ -409,7 +417,6 @@ public class StdMapper extends RecMapper {
         public StdMapper append(BiFunction<Ast<?>, ImList<RecMapper.ParseStack>, Result<T, RecMapError>> deserializer) {
             //noinspection unchecked,rawtypes
             var dser = new CustomDeserializer(
-                deserializedClass,
                 (BiFunction) deserializer,
                 defaultValue);
 
