@@ -6,6 +6,7 @@ import xyz.cofe.coll.im.Result;
 import xyz.cofe.json.stream.ast.Ast;
 import xyz.cofe.json.stream.ast.AstParser;
 import xyz.cofe.json.stream.ast.AstWriter;
+import xyz.cofe.json.stream.token.CharPointer;
 import xyz.cofe.json.stream.token.DummyCharPointer;
 
 import java.lang.reflect.Array;
@@ -25,10 +26,10 @@ import java.util.function.Function;
  */
 public class RecMapper {
     /** Указывает способ указания подтипа */
-    private final SubClassWriter subClassWriter;
+    protected final SubClassWriter subClassWriter;
 
     /** Способ получения имени/типа экземпляра */
-    private final SubClassResolver subClassResolver;
+    protected final SubClassResolver subClassResolver;
 
     public RecMapper(){
         this.subClassWriter = SubClassWriter.defaultWriter;
@@ -425,6 +426,7 @@ public class RecMapper {
     protected <T> T parse(String json, Type type, ImList<ParseStack> stack) {
         if (json == null) throw new IllegalArgumentException("json==null");
         if (type == null) throw new IllegalArgumentException("type==null");
+        if( stack==null ) throw new IllegalArgumentException("stack==null");
 
         stack = stack.prepend(new ParseStack.parseStringType(json, type));
 
@@ -509,6 +511,18 @@ public class RecMapper {
 
         var stack1 = stack.prepend(new ParseStack.optionalParse<T>(ast, itemParse));
         return Optional.of(itemParse.apply(ast, stack1));
+    }
+
+    public <T> Result<T,RecMapError> tryParse(Ast<?> ast, Type type, ImList<ParseStack> stack){
+        if( ast==null ) throw new IllegalArgumentException("ast==null");
+        if( type==null ) throw new IllegalArgumentException("type==null");
+        if( stack==null ) throw new IllegalArgumentException("stack==null");
+
+        try {
+            return Result.ok(parse(ast,type,stack));
+        } catch (RecMapError e){
+            return Result.error(e);
+        }
     }
 
     /**
@@ -643,7 +657,7 @@ public class RecMapper {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T parseSealedInterface(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
+    protected <T> T parseSealedInterface(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
         var stack1 = stack.prepend(new ParseStack.parseSealedInterface<T>(ast, cls));
         return subClassResolver.resolve(ast, cls.getPermittedSubclasses()).fold(
             resolved -> (T) parseSubclass(resolved.body(), resolved.klass(), stack1),
@@ -653,7 +667,7 @@ public class RecMapper {
         );
     }
 
-    private <T> T parseSubclass(Ast<?> ast, Class<T> subClass, ImList<ParseStack> stack) {
+    protected <T> T parseSubclass(Ast<?> ast, Class<T> subClass, ImList<ParseStack> stack) {
         stack = stack.prepend(new ParseStack.parseSubclass<T>(ast, subClass));
         if (ast instanceof Ast.ObjectAst<?> objAst) {
             if (subClass.isRecord()) {
@@ -672,34 +686,41 @@ public class RecMapper {
      * @param recordComponent Компонент record
      * @param objectAst       ast дерево, json object соответствующий record
      * @param fieldName       имя поля в record
-     * @param valueParse      функция парсинга по умолчанию
      * @param stack           Стек парсера
      */
     public record JsonToField(
         RecordComponent recordComponent,
         Ast.ObjectAst<?> objectAst,
         String fieldName,
-        Fn3<Ast<?>, Type, ImList<ParseStack>, Result<Object, RecMapError>> valueParse,
         ImList<ParseStack> stack
     ) {
         public JsonToField fieldName(String newName) {
             if (newName == null) throw new IllegalArgumentException("newName==null");
-            return new JsonToField(recordComponent, objectAst, newName, valueParse, stack);
+            return new JsonToField(
+                recordComponent,
+                objectAst,
+                newName,
+                //valueParse,
+                stack
+            );
         }
     }
 
     protected Result<Object,RecMapError> fieldDeserialization(JsonToField jsonToField){
         var fieldClass = jsonToField.recordComponent().getType();
-        var fieldIsOptional = fieldClass == Optional.class;
-        var fieldAstOpt = jsonToField.objectAst().get(jsonToField.fieldName());
 
-        if ((fieldAstOpt.isEmpty() || fieldAstOpt.map(a -> a instanceof Ast.NullAst<?>).orElse(false))
-            && fieldIsOptional
+        var recordAcceptOptional = fieldClass == Optional.class;
+        var astOpt = jsonToField.objectAst().get(jsonToField.fieldName());
+        var astIsNull = astOpt.map(a -> a instanceof Ast.NullAst<?>).orElse(false);
+
+        // optional field
+        if ((astOpt.isEmpty() || astIsNull)
+            && recordAcceptOptional
         ) {
             return Result.ok(Optional.empty());
         }
 
-        if (fieldAstOpt.isEmpty()) {
+        if (astOpt.isEmpty()) {
             return Result.error(
                 new RecMapParseError(
                     "expect field " + jsonToField.fieldName() + " in json",
@@ -708,14 +729,14 @@ public class RecMapper {
             );
         }
 
-        return jsonToField.valueParse().apply(
-            fieldAstOpt.get(),
-            jsonToField.recordComponent().getGenericType(),
-            jsonToField.stack
-        );
+        return tryParse(astOpt.get(), jsonToField.recordComponent().getGenericType(), jsonToField.stack );
     }
 
-    private <T> T parseRecord(Ast.ObjectAst<?> objAst, Class<T> recordClass, ImList<ParseStack> stack) {
+//    protected Optional<Ast<?>> resolveFieldOf(Ast.ObjectAst<?> objectAst, RecordComponent recordComponent, ImList<ParseStack> stack){
+//
+//    }
+
+    protected <T> T parseRecord(Ast.ObjectAst<?> objAst, Class<T> recordClass, ImList<ParseStack> stack) {
         var stack1 = stack.prepend(new ParseStack.parseRecord<T>(objAst, recordClass));
 
         var recComponents = recordClass.getRecordComponents();
@@ -734,13 +755,6 @@ public class RecMapper {
                 recComponents[ri],
                 objAst,
                 name,
-                (ast, type, stack2) -> {
-                    try {
-                        return Result.ok(parse(ast, recType, stack2));
-                    } catch (RecMapError e) {
-                        return Result.error(e);
-                    }
-                },
                 stack1
             );
 
@@ -762,7 +776,7 @@ public class RecMapper {
         }
     }
 
-    private <T> T parseEnum(Ast<?> ast, Class<T> enumCls, ImList<ParseStack> stack) {
+    protected <T> T parseEnum(Ast<?> ast, Class<T> enumCls, ImList<ParseStack> stack) {
         stack = stack.prepend(new ParseStack.parseEnum<T>(ast, enumCls));
 
         if (ast instanceof Ast.StringAst<?> strAst) {
