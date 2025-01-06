@@ -9,12 +9,14 @@ import xyz.cofe.json.stream.ast.AstWriter;
 import xyz.cofe.json.stream.query.QuerySetFin;
 import xyz.cofe.json.stream.token.DummyCharPointer;
 
+import java.lang.reflect.RecordComponent;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Objects;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static xyz.cofe.coll.im.Result.ok;
 
 @SuppressWarnings("SimplifiableAssertion")
 public class RecMapTest {
@@ -231,17 +233,35 @@ public class RecMapTest {
 
     @Test
     public void restoreDefaultFieldSerialization() {
-        RecMapper mapper = new RecMapper(){
+        RecMapper mapper = new RecMapper() {
+//            @Override
+//            protected Result<Object, RecMapParseError> fieldDeserialization(JsonToField fld) {
+//                return
+//                    fld.fieldName().equals("a") && fld.recordComponent().getDeclaringRecord() == NodeB.class
+//                    ? Result.ok("aa")
+//                    : super.fieldDeserialization(fld);
+//            }
+
+
             @Override
-            protected Result<Object, RecMapError> fieldDeserialization(JsonToField fld) {
-                return
-                    fld.fieldName().equals("a") && fld.recordComponent().getDeclaringRecord() == NodeB.class
-                    ? Result.ok("aa")
-                    : super.fieldDeserialization(fld);
+            protected Result<Object, RecMapParseError> resolveOptionalField(
+                Ast.ObjectAst<?> objectAst,
+                RecordComponent field,
+                RequiredFiled requiredFiled,
+                ImList<ParseStack> stack
+            ) {
+                if (field.getName().equals("a") &&
+                    field.getDeclaringRecord() == NodeB.class
+                ) {
+                    return ok("aa");
+                }
+
+                return super.resolveOptionalField(objectAst, field, requiredFiled, stack);
             }
         };
 
-        Node node = mapper.parse(
+        Node node =
+        mapper.parse(
             """
                 { "NodeB": {} }
                 """, Node.class);
@@ -285,13 +305,23 @@ public class RecMapTest {
             {"NodeC":{"b":1,"cc":{"NodeA":{}}}}
             """;
 
-        RecMapper mapper = new RecMapper(){
+        RecMapper mapper = new RecMapper() {
             @Override
-            protected Result<Object, RecMapError> fieldDeserialization(JsonToField jsonToField) {
-                return
-                    jsonToField.recordComponent().getName().equals("c") && jsonToField.recordComponent().getDeclaringRecord() == NodeC.class
-                    ? super.fieldDeserialization(jsonToField.fieldName("cc"))
-                    : super.fieldDeserialization(jsonToField);
+            protected Result<? extends Ast<?>, RequiredFiled> resolveFieldOf(
+                Ast.ObjectAst<?> objectAst,
+                RecordComponent recordComponent,
+                ImList<ParseStack> stack
+            ) {
+                if (recordComponent.getName().equals("c")
+                    && recordComponent.getDeclaringRecord() == NodeC.class
+                ) {
+                    return Result.from(
+                        objectAst.get("cc"),
+                        () -> RequiredFiled.of("cc")
+                    );
+                }
+
+                return super.resolveFieldOf(objectAst, recordComponent, stack);
             }
         };
 
@@ -318,11 +348,18 @@ public class RecMapTest {
             }
 
             @Override
-            protected Result<Object, RecMapError> fieldDeserialization(JsonToField fld) {
-                return
-                    fld.recordComponent().getType() == LocalDateTime.class && fld.recordComponent().getDeclaringRecord() == Custom.class
-                    ? Result.from(fld.objectAst().get("date"), () -> new RecMapError("aa")).map(a -> parse(a, String.class)).map(LocalDateTime::parse)
-                    : super.fieldDeserialization(fld);
+            protected Result<Object, RecMapParseError> fieldDeserialization(
+                Ast<?> ast,
+                RecordComponent field,
+                ImList<ParseStack> stack
+            ) {
+                if (field.getType() == LocalDateTime.class) {
+                    return tryParse(ast, String.class)
+                        .map(LocalDateTime::parse)
+                        .map(v -> (Object) v);
+                }
+
+                return super.fieldDeserialization(ast, field, stack);
             }
         };
 

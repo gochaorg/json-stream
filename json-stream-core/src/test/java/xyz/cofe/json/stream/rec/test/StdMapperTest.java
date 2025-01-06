@@ -25,17 +25,17 @@ public class StdMapperTest {
         mapper.serializerFor(LocalDateTime.class)
             .append(ldt -> Optional.of(mapper.toAst(ldt.toString())));
 
-        mapper.deserializeFor(LocalDateTime.class)
-            .append((ast,stack) ->
-                mapper.tryParse(ast, String.class)
-                    .fmap( str -> {
-                        try {
-                            return ok(LocalDateTime.parse(str));
-                        }catch (DateTimeParseException e){
-                            return error(new RecMapError(e));
-                        }
-                    })
-            );
+//        mapper.deserializeFor(LocalDateTime.class)
+//            .append((ast,stack) ->
+//                mapper.tryParse(ast, String.class)
+//                    .fmap( str -> {
+//                        try {
+//                            return ok(LocalDateTime.parse(str));
+//                        }catch (DateTimeParseException e){
+//                            return error(new RecMapError(e));
+//                        }
+//                    })
+//            );
 
         var sampleWrite = new Custom(LocalDateTime.now(), 1);
         System.out.println("sample write:\n"+sampleWrite);

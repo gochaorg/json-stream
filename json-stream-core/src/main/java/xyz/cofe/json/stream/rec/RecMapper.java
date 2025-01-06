@@ -21,34 +21,42 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import static xyz.cofe.coll.im.Result.error;
+import static xyz.cofe.coll.im.Result.ok;
+
 /**
  * Сериализация sealed типов
  */
 public class RecMapper {
-    /** Указывает способ указания подтипа */
+    /**
+     * Указывает способ указания подтипа
+     */
     protected final SubClassWriter subClassWriter;
 
-    /** Способ получения имени/типа экземпляра */
+    /**
+     * Способ получения имени/типа экземпляра
+     */
     protected final SubClassResolver subClassResolver;
 
-    public RecMapper(){
+    public RecMapper() {
         this.subClassWriter = SubClassWriter.defaultWriter;
         this.subClassResolver = SubClassResolver.defaultResolver();
     }
 
     /**
      * Конструктор
-     * @param subClassWriter - способ указания подтипа
+     *
+     * @param subClassWriter   - способ указания подтипа
      * @param subClassResolver - способ получения имени/типа экземпляра
      */
     public RecMapper(
         SubClassWriter subClassWriter,
         SubClassResolver subClassResolver
-    ){
-        if( subClassWriter==null ) throw new IllegalArgumentException("subClassWriter==null");
+    ) {
+        if (subClassWriter == null) throw new IllegalArgumentException("subClassWriter==null");
         this.subClassWriter = subClassWriter;
 
-        if( subClassResolver==null ) throw new IllegalArgumentException("subClassResolver==null");
+        if (subClassResolver == null) throw new IllegalArgumentException("subClassResolver==null");
         this.subClassResolver = subClassResolver;
     }
 
@@ -181,7 +189,7 @@ public class RecMapper {
     //endregion
 
     //region toAst() containers
-    protected Optional<Ast<DummyCharPointer>> customObjectSerialize(Object record){
+    protected Optional<Ast<DummyCharPointer>> customObjectSerialize(Object record) {
         return Optional.empty();
     }
 
@@ -286,19 +294,19 @@ public class RecMapper {
             return new FieldToJson(record, recordClass, name, fieldValue, recordComponent, keyMapper, valueMapper);
         }
 
-        public FieldToJson keyMapper(Function<String, Ast.Key<DummyCharPointer>> keyMapper){
-            if( keyMapper==null ) throw new IllegalArgumentException("keyMapper==null");
+        public FieldToJson keyMapper(Function<String, Ast.Key<DummyCharPointer>> keyMapper) {
+            if (keyMapper == null) throw new IllegalArgumentException("keyMapper==null");
             return new FieldToJson(record, recordClass, fieldName, fieldValue, recordComponent, keyMapper, valueMapper);
         }
 
-        public FieldToJson valueMapper(Function<Object, Ast<DummyCharPointer>> valueMapper){
-            if( keyMapper==null ) throw new IllegalArgumentException("keyMapper==null");
+        public FieldToJson valueMapper(Function<Object, Ast<DummyCharPointer>> valueMapper) {
+            if (keyMapper == null) throw new IllegalArgumentException("keyMapper==null");
             return new FieldToJson(record, recordClass, fieldName, fieldValue, recordComponent, keyMapper, valueMapper);
         }
     }
 
     @SuppressWarnings({"unused", "OptionalGetWithoutIsPresent"})
-    protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fieldToJson){
+    protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fieldToJson) {
         if (fieldToJson.fieldValue() == null) return ImList.of();
         if (fieldToJson.fieldValue() instanceof Optional<?> opt && opt.isEmpty()) return ImList.of();
 
@@ -426,7 +434,7 @@ public class RecMapper {
     protected <T> T parse(String json, Type type, ImList<ParseStack> stack) {
         if (json == null) throw new IllegalArgumentException("json==null");
         if (type == null) throw new IllegalArgumentException("type==null");
-        if( stack==null ) throw new IllegalArgumentException("stack==null");
+        if (stack == null) throw new IllegalArgumentException("stack==null");
 
         stack = stack.prepend(new ParseStack.parseStringType(json, type));
 
@@ -513,14 +521,14 @@ public class RecMapper {
         return Optional.of(itemParse.apply(ast, stack1));
     }
 
-    public <T> Result<T,RecMapError> tryParse(Ast<?> ast, Type type, ImList<ParseStack> stack){
-        if( ast==null ) throw new IllegalArgumentException("ast==null");
-        if( type==null ) throw new IllegalArgumentException("type==null");
-        if( stack==null ) throw new IllegalArgumentException("stack==null");
+    public <T> Result<T, RecMapParseError> tryParse(Ast<?> ast, Type type, ImList<ParseStack> stack) {
+        if (ast == null) throw new IllegalArgumentException("ast==null");
+        if (type == null) throw new IllegalArgumentException("type==null");
+        if (stack == null) throw new IllegalArgumentException("stack==null");
 
         try {
-            return Result.ok(parse(ast,type,stack));
-        } catch (RecMapError e){
+            return ok(parse(ast, type, stack));
+        } catch (RecMapParseError e) {
             return Result.error(e);
         }
     }
@@ -533,19 +541,19 @@ public class RecMapper {
      * @param <T> целевой тип
      * @return результат парсинга
      */
-    public <T> Result<T, RecMapError> tryParse(Ast<?> ast, Class<T> cls) {
+    public <T> Result<T, RecMapParseError> tryParse(Ast<?> ast, Class<T> cls) {
         return tryParse(ast, cls, ImList.of());
     }
 
-    public <T> Result<T, RecMapError> tryParse(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
+    public <T> Result<T, RecMapParseError> tryParse(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
         stack = stack.prepend(new ParseStack.tryParse<T>(ast, cls));
 
         if (ast == null) return Result.error(new RecMapParseError(new IllegalArgumentException("ast==null"), stack));
         if (cls == null) return Result.error(new RecMapParseError(new IllegalArgumentException("cls==null"), stack));
 
         try {
-            return Result.ok(parse(ast, cls, stack));
-        } catch (RecMapError e) {
+            return ok(parse(ast, cls, stack));
+        } catch (RecMapParseError e) {
             return Result.error(e);
         }
     }
@@ -646,98 +654,114 @@ public class RecMapper {
             }
             throw new RecMapParseError("can't convert to char from " + ast.getClass().getSimpleName(), stack);
         } else if (cls.isSealed() && cls.isInterface()) {
-            return parseSealedInterface(ast, cls, stack);
+            var res = parseSealedInterface(ast, cls, stack);
+            if (res.isError())//noinspection OptionalGetWithoutIsPresent
+                throw res.getError().get();
+            return res.unwrap();
         } else if (cls.isRecord() && ast instanceof Ast.ObjectAst<?> objAst) {
-            return parseRecord(objAst, cls, stack);
+            var res = parseRecord(objAst, cls, stack);
+            if (res.isError())//noinspection OptionalGetWithoutIsPresent
+                throw res.getError().get();
+            return res.unwrap();
         } else if (cls.isEnum()) {
-            return parseEnum(ast, cls, stack);
+            var res = parseEnum(ast, cls, stack);
+            if (res.isError())//noinspection OptionalGetWithoutIsPresent
+                throw res.getError().get();
+            return res.unwrap();
         }
 
         throw new RecMapParseError("unsupported " + cls, stack);
     }
 
     @SuppressWarnings("unchecked")
-    protected <T> T parseSealedInterface(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
+    protected <T> Result<T, RecMapParseError> parseSealedInterface(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
         var stack1 = stack.prepend(new ParseStack.parseSealedInterface<T>(ast, cls));
-        return subClassResolver.resolve(ast, cls.getPermittedSubclasses()).fold(
-            resolved -> (T) parseSubclass(resolved.body(), resolved.klass(), stack1),
-            err -> {
-                throw new RecMapParseError(err, stack1);
-            }
-        );
+
+        return subClassResolver.resolve(ast, cls.getPermittedSubclasses())
+            .mapErr(e -> new RecMapParseError(e, stack1))
+            .fmap(resolved ->
+                this.<T>parseSubclass(
+                    resolved.body(),
+                    (Class<T>) resolved.klass(),
+                    stack1)
+            );
     }
 
-    protected <T> T parseSubclass(Ast<?> ast, Class<T> subClass, ImList<ParseStack> stack) {
+    protected <T> Result<T, RecMapParseError> parseSubclass(Ast<?> ast, Class<T> subClass, ImList<ParseStack> stack) {
         stack = stack.prepend(new ParseStack.parseSubclass<T>(ast, subClass));
         if (ast instanceof Ast.ObjectAst<?> objAst) {
             if (subClass.isRecord()) {
                 return parseRecord(objAst, subClass, stack);
             } else {
-                throw new RecMapParseError("expect " + subClass + " is record", stack);
+                return error(new RecMapParseError("expect " + subClass + " is record", stack));
             }
         } else {
-            throw new RecMapParseError("expect Ast.ObjectAst", stack);
+            return error(new RecMapParseError("expect Ast.ObjectAst", stack));
         }
     }
 
-    /**
-     * Парсинг ast в поле record
-     *
-     * @param recordComponent Компонент record
-     * @param objectAst       ast дерево, json object соответствующий record
-     * @param fieldName       имя поля в record
-     * @param stack           Стек парсера
-     */
-    public record JsonToField(
-        RecordComponent recordComponent,
-        Ast.ObjectAst<?> objectAst,
-        String fieldName,
+    protected Result<Object, RecMapParseError> fieldDeserialization(
+        Ast<?> ast,
+        RecordComponent field,
         ImList<ParseStack> stack
     ) {
-        public JsonToField fieldName(String newName) {
-            if (newName == null) throw new IllegalArgumentException("newName==null");
-            return new JsonToField(
-                recordComponent,
-                objectAst,
-                newName,
-                //valueParse,
+        return tryParse(
+            ast,
+            field.getGenericType(),
+            stack
+        );
+    }
+
+    public record RequiredFiled(
+        ImList<String> fieldNames
+    ) {
+        public static RequiredFiled of(String name, String... otherNames) {
+            return new RequiredFiled(ImList.of(otherNames).prepend(name));
+        }
+    }
+
+    protected Result<? extends Ast<?>, RequiredFiled> resolveFieldOf(
+        Ast.ObjectAst<?> objectAst,
+        RecordComponent field,
+        ImList<ParseStack> stack) {
+        var ast = objectAst.get(field.getName());
+        if (ast.isEmpty()) {
+            return error(new RequiredFiled(ImList.of(field.getName())));
+        } else {
+            return ok(ast.get());
+        }
+    }
+
+    protected Result<Object, RecMapParseError> resolveOptionalField(
+        Ast.ObjectAst<?> objectAst,
+        RecordComponent field,
+        RequiredFiled requiredFiled,
+        ImList<ParseStack> stack
+    ) {
+        if (field.getType() == Optional.class) {
+            return ok(Optional.empty());
+        }
+
+        return error(
+            new RecMapParseError(
+                "expect field " + requiredFiled.fieldNames() + " in json " + objectAst,
                 stack
-            );
-        }
+            )
+        );
     }
 
-    protected Result<Object,RecMapError> fieldDeserialization(JsonToField jsonToField){
-        var fieldClass = jsonToField.recordComponent().getType();
-
-        var recordAcceptOptional = fieldClass == Optional.class;
-        var astOpt = jsonToField.objectAst().get(jsonToField.fieldName());
-        var astIsNull = astOpt.map(a -> a instanceof Ast.NullAst<?>).orElse(false);
-
-        // optional field
-        if ((astOpt.isEmpty() || astIsNull)
-            && recordAcceptOptional
-        ) {
-            return Result.ok(Optional.empty());
-        }
-
-        if (astOpt.isEmpty()) {
-            return Result.error(
-                new RecMapParseError(
-                    "expect field " + jsonToField.fieldName() + " in json",
-                    jsonToField.stack
-                )
-            );
-        }
-
-        return tryParse(astOpt.get(), jsonToField.recordComponent().getGenericType(), jsonToField.stack );
+    protected Result<Object, RecMapParseError> resolveNullField(
+        Ast.ObjectAst<?> objectAst,
+        RecordComponent recordComponent,
+        RequiredFiled requiredFiled,
+        ImList<ParseStack> stack
+    ) {
+        return resolveOptionalField(objectAst, recordComponent, requiredFiled, stack);
     }
 
-//    protected Optional<Ast<?>> resolveFieldOf(Ast.ObjectAst<?> objectAst, RecordComponent recordComponent, ImList<ParseStack> stack){
-//
-//    }
 
-    protected <T> T parseRecord(Ast.ObjectAst<?> objAst, Class<T> recordClass, ImList<ParseStack> stack) {
-        var stack1 = stack.prepend(new ParseStack.parseRecord<T>(objAst, recordClass));
+    protected <T> Result<T, RecMapParseError> parseRecord(Ast.ObjectAst<?> objAst, Class<T> recordClass, ImList<ParseStack> stack) {
+        stack = stack.prepend(new ParseStack.parseRecord<T>(objAst, recordClass));
 
         var recComponents = recordClass.getRecordComponents();
         var recComponentClasses = new Class<?>[recComponents.length];
@@ -749,19 +773,53 @@ public class RecMapper {
             var recClass = recComponents[ri].getType();
             recComponentClasses[ri] = recClass;
 
-            var recType = recComponents[ri].getGenericType();
-
-            var jsonToField = new JsonToField(
-                recComponents[ri],
+            // Получение целевого ast
+            var fieldAstRes = resolveFieldOf(
                 objAst,
-                name,
-                stack1
+                recComponents[ri],
+                stack
             );
 
-            var res = fieldDeserialization(jsonToField);
+            boolean isNullAst =
+                fieldAstRes.map(ast -> ast instanceof Ast.NumberAst<?>)
+                    .fold(v -> v, v2 -> false);
+
+            if (fieldAstRes.isError() || isNullAst) {
+                //noinspection OptionalGetWithoutIsPresent
+                var resolveEmpty =
+                    isNullAst
+                        ?
+                        resolveNullField(
+                            objAst,
+                            recComponents[ri],
+                            fieldAstRes.getError().get(),
+                            stack
+                        ) :
+                        resolveOptionalField(
+                            objAst,
+                            recComponents[ri],
+                            fieldAstRes.getError().get(),
+                            stack
+                        );
+
+                if (resolveEmpty.isError()) {
+                    //noinspection OptionalGetWithoutIsPresent
+                    return error(resolveEmpty.getError().get());
+                }
+
+                recValues[ri] = resolveEmpty.unwrap();
+                continue;
+            }
+
+            var res = fieldDeserialization(
+                fieldAstRes.unwrap(),
+                recComponents[ri],
+                stack
+            );
+
             if (res.isError()) {
                 //noinspection OptionalGetWithoutIsPresent
-                throw res.getError().get();
+                return error(res.getError().get());
             }
 
             recValues[ri] = res.unwrap();
@@ -769,25 +827,25 @@ public class RecMapper {
 
         try {
             var ctor = recordClass.getConstructor(recComponentClasses);
-            return ctor.newInstance(recValues);
+            return ok(ctor.newInstance(recValues));
         } catch (NoSuchMethodException | InstantiationException | IllegalAccessException |
                  InvocationTargetException e) {
-            throw new RecMapParseError("can't create instance of " + recordClass, e, stack);
+            return error(new RecMapParseError("can't create instance of " + recordClass, e, stack));
         }
     }
 
-    protected <T> T parseEnum(Ast<?> ast, Class<T> enumCls, ImList<ParseStack> stack) {
+    protected <T> Result<T, RecMapParseError> parseEnum(Ast<?> ast, Class<T> enumCls, ImList<ParseStack> stack) {
         stack = stack.prepend(new ParseStack.parseEnum<T>(ast, enumCls));
 
         if (ast instanceof Ast.StringAst<?> strAst) {
             var enumConsts = enumCls.getEnumConstants();
             for (var enumConst : enumConsts) {
                 if (strAst.value().equals(((Enum<?>) enumConst).name())) {
-                    return enumConst;
+                    return ok(enumConst);
                 }
             }
 
-            throw new RecMapParseError(
+            return error(new RecMapParseError(
                 "can't convert to enum (" + enumCls +
                     ") from \"" + strAst.value() +
                     "\", expect " +
@@ -796,10 +854,12 @@ public class RecMapper {
                         "", (sum, it) -> sum.isBlank() ? it : sum + ", " + it
                     ),
                 stack
-            );
+            ));
         }
 
-        throw new RecMapParseError("can't convert to enum (" + enumCls + ") from " + ast.getClass().getSimpleName(), stack);
+        return error(
+            new RecMapParseError(
+                "can't convert to enum (" + enumCls + ") from " + ast.getClass().getSimpleName(), stack));
     }
     //endregion
 }
