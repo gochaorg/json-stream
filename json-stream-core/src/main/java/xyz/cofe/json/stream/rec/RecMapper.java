@@ -732,10 +732,11 @@ public class RecMapper {
         }
     }
 
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     protected Result<Object, RecMapParseError> resolveOptionalField(
         Ast.ObjectAst<?> objectAst,
         RecordComponent field,
-        RequiredFiled requiredFiled,
+        Optional<RequiredFiled> requiredFiled,
         ImList<ParseStack> stack
     ) {
         if (field.getType() == Optional.class) {
@@ -744,16 +745,20 @@ public class RecMapper {
 
         return error(
             new RecMapParseError(
-                "expect field " + requiredFiled.fieldNames() + " in json " + objectAst,
+                requiredFiled
+                    .map( rf -> "expect field " + requiredFiled + " in json " + objectAst)
+                    .orElse("field not found (or null) in json "+objectAst)
+                ,
                 stack
             )
         );
     }
 
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     protected Result<Object, RecMapParseError> resolveNullField(
         Ast.ObjectAst<?> objectAst,
         RecordComponent recordComponent,
-        RequiredFiled requiredFiled,
+        Optional<RequiredFiled> requiredFiled,
         ImList<ParseStack> stack
     ) {
         return resolveOptionalField(objectAst, recordComponent, requiredFiled, stack);
@@ -781,7 +786,7 @@ public class RecMapper {
             );
 
             boolean isNullAst =
-                fieldAstRes.map(ast -> ast instanceof Ast.NumberAst<?>)
+                fieldAstRes.map(ast -> ast instanceof Ast.NullAst<?>)
                     .fold(v -> v, v2 -> false);
 
             if (fieldAstRes.isError() || isNullAst) {
@@ -792,13 +797,13 @@ public class RecMapper {
                         resolveNullField(
                             objAst,
                             recComponents[ri],
-                            fieldAstRes.getError().get(),
+                            fieldAstRes.getError(),
                             stack
                         ) :
                         resolveOptionalField(
                             objAst,
                             recComponents[ri],
-                            fieldAstRes.getError().get(),
+                            fieldAstRes.getError(),
                             stack
                         );
 

@@ -247,7 +247,7 @@ public class RecMapTest {
             protected Result<Object, RecMapParseError> resolveOptionalField(
                 Ast.ObjectAst<?> objectAst,
                 RecordComponent field,
-                RequiredFiled requiredFiled,
+                Optional<RequiredFiled> requiredFiled,
                 ImList<ParseStack> stack
             ) {
                 if (field.getName().equals("a") &&
