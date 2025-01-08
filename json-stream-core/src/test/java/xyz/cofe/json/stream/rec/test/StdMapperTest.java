@@ -84,7 +84,8 @@ public class StdMapperTest {
         assertTrue(sampleRead.equals(sampleWrite));
     }
 
-    public record CustomField(String a, int b){ }
+    public record CustomField(String a, int b){
+    }
 
     @Test
     public void customField(){

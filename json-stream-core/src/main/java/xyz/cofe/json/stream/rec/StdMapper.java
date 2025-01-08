@@ -285,7 +285,11 @@ public class StdMapper extends RecMapper {
      */
     @Override
     protected Result<Object, RecMapParseError> resolveOptionalField(
-        Ast.ObjectAst<?> objectAst, RecordComponent field, Optional<RequiredFiled> requiredFiled, ImList<ParseStack> stack) {
+        Ast.ObjectAst<?> objectAst,
+        RecordComponent field,
+        Optional<RequiredFiled> requiredFiled,
+        ImList<ParseStack> stack
+    ) {
 
         var fconf = fieldsReadConfig.get(fieldIdOf(field));
         if (fconf != null && fconf.defaultValue().isPresent()) {
@@ -549,8 +553,10 @@ public class StdMapper extends RecMapper {
     @Override
     public <T> Result<T, RecMapParseError> tryParse(Ast<?> ast, Type type, ImList<ParseStack> stack) {
         if( ast!=null && type!=null ) {
+            //noinspection SuspiciousMethodCalls
             var dser = deserializers.get(type);
-            if( dser!=null )return dser.deserializer.apply(ast,stack).map( v -> (T)v );
+            if( dser!=null )//noinspection unchecked
+                return dser.deserializer.apply(ast,stack).map( v -> (T)v );
         }
 
         return super.tryParse(ast, type, stack);
@@ -560,7 +566,8 @@ public class StdMapper extends RecMapper {
     public <T> Result<T, RecMapParseError> tryParse(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
         if( ast!=null && cls!=null ) {
             var dser = deserializers.get(cls);
-            if( dser!=null )return dser.deserializer.apply(ast,stack).map( v -> (T)v );
+            if( dser!=null )//noinspection unchecked
+                return dser.deserializer.apply(ast,stack).map( v -> (T)v );
         }
 
         return super.tryParse(ast, cls, stack);
