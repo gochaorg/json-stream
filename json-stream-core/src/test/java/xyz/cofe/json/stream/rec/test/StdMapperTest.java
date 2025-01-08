@@ -1,10 +1,12 @@
 package xyz.cofe.json.stream.rec.test;
 
 import org.junit.jupiter.api.Test;
+import xyz.cofe.coll.im.ImList;
 import xyz.cofe.json.stream.ast.Ast;
 import xyz.cofe.json.stream.ast.AstWriter;
 import xyz.cofe.json.stream.rec.RecMapError;
 import xyz.cofe.json.stream.rec.RecMapParseError;
+import xyz.cofe.json.stream.rec.RecMapTest;
 import xyz.cofe.json.stream.rec.StdMapper;
 import xyz.cofe.json.stream.token.CharPointer;
 
@@ -138,5 +140,71 @@ public class StdMapperTest {
 
         var sampleRead = mapper.parse(ast, CustomField.class);
         assertTrue(sampleRead.b()==2);
+    }
+
+    public sealed interface Node {
+    }
+
+    public record NodeA() implements Node {
+    }
+
+    public record NodeB(String a) implements Node {
+    }
+
+    public record NodeC(int b, Node c) implements Node {
+    }
+
+    public record NodeD(int b, Node c, Node d) implements Node {
+    }
+
+    public record NodeE(ImList<Node> nodes) implements Node {
+    }
+
+    public record NodeF(Optional<Node> node) implements Node {
+    }
+
+    @Test
+    public void nodeSample(){
+        StdMapper mapper = new StdMapper();
+
+        var ast = mapper.toAst(new NodeB("abc"));
+        var json = AstWriter.toString(ast, true);
+        System.out.println(json);
+
+        var node = mapper.parse(ast, Node.class);
+        System.out.println(node);
+
+        //////////
+
+        ast = mapper.toAst(
+            new NodeE(
+                ImList.of(
+                    new NodeB("abc"),
+                    new NodeB("def")
+                )
+            )
+        );
+
+        json = AstWriter.toString(ast, true);
+        System.out.println(json);
+
+        assertTrue(json.contains("abc"));
+        assertTrue(json.contains("def"));
+
+        node = mapper.parse(ast, Node.class);
+        System.out.println(node);
+
+        ///////////
+
+        ast = mapper.toAst(
+            new NodeF(Optional.empty())
+        );
+
+        json = AstWriter.toString(ast, true);
+        System.out.println(json);
+
+        node = mapper.parse(ast, Node.class);
+        System.out.println(node);
+
     }
 }
