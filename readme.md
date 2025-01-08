@@ -178,8 +178,8 @@ public class StdMapperTest {
     - Свертка fold
 - Отображение java - record
     - Базовая часть (RecMapper)
-        - Отображение примитивов
-        - Отображение enum
+        - [Отображение примитивов](https://github.com/gochaorg/json-stream/blob/6228d379d3003178f706de2fb856f25480652a26/json-stream-core/src/test/java/xyz/cofe/json/stream/rec/RecMapTest.java#L137)
+        - [Отображение enum](https://github.com/gochaorg/json-stream/blob/6228d379d3003178f706de2fb856f25480652a26/json-stream-core/src/test/java/xyz/cofe/json/stream/rec/RecMapTest.java#L194)
         - Отображение автономных (по иерархии) record
         - Отображение списков с автономными record
         - Отображение иерархических типов (sealed)
@@ -210,3 +210,59 @@ public class StdMapperTest {
         - Математические типы (BigDecimal / BigInteger)
         - Ссылки (URI,URL,InetAddress)
         - Регулярные выражения
+
+-----------------
+
+Автономные record
+-------------
+
+Библиотека по умолчанию различает record на
+- Те, что в родительских типах - интерфейсах имеют маркер sealed
+  - При сохранении указывается тип 
+- И автономные
+  - При сохранении тип не указывается 
+
+Пример автономных record
+
+```java
+record Node() {}
+```
+
+Пример не автономных
+
+```java
+sealed interface BaseType {
+    record NodeA() implements BaseType {}
+    record NodeB() implements BaseType {}
+} 
+```
+
+В данном случае, NodeA - не является автономный, по скольку BaseType - является sealed.
+
+Это различие влияет на способ сохранения/восстановления json
+
+### Автономный
+
+```
+mapper.toJson( new Node() )
+```
+
+Будет сгенерирован такой json
+
+```json
+{}
+```
+
+### Не автономный
+
+```
+mapper.toJson( new NodeA() )
+```
+
+Будет сгенерирован такой json
+
+```json
+{
+  "NodeA": {}
+}
+```
