@@ -180,7 +180,7 @@ public class StdMapperTest {
     - Базовая часть (RecMapper)
         - [Отображение примитивов](https://github.com/gochaorg/json-stream/blob/6228d379d3003178f706de2fb856f25480652a26/json-stream-core/src/test/java/xyz/cofe/json/stream/rec/RecMapTest.java#L137)
         - [Отображение enum](https://github.com/gochaorg/json-stream/blob/6228d379d3003178f706de2fb856f25480652a26/json-stream-core/src/test/java/xyz/cofe/json/stream/rec/RecMapTest.java#L194)
-        - Отображение автономных (по иерархии) record
+        - Отображение [автономных](#автономные-record) (по иерархии) record
         - Отображение списков с автономными record
         - Отображение иерархических типов (sealed)
         - Опциональные типы (Optional<T>)
