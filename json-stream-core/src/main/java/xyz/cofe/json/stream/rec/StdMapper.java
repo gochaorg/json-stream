@@ -602,4 +602,10 @@ public class StdMapper extends RecMapper {
         }
     }
     //endregion
+
+    public StdMapper subTypeWriter(SubClassWriter writer){
+        if( writer==null ) throw new IllegalArgumentException("writer==null");
+        this.subClassWriter = writer;
+        return this;
+    }
 }

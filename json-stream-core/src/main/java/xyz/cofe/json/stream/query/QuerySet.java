@@ -356,6 +356,14 @@ public abstract class QuerySet<S extends CharPointer<S>, SELF extends QuerySet<S
         );
     }
 
+    public SELF pretty(boolean pretty){
+        return tokenWriter(
+            out -> pretty
+                ? new IndentTokenWriter( new SimpleTokenWriter(out) )
+                : new SimpleTokenWriter(out)
+        );
+    }
+
     public String toString(){
         StringWriter sw = new StringWriter();
         write(tokenWriter(sw));

@@ -7,7 +7,7 @@ import java.util.Optional;
  * @param <C> Тип элемента в исходнике (символ или лексема)
  * @param <SELF>
  */
-public sealed interface SourcePointer<C, SELF extends SourcePointer<C,SELF>> permits CharPointer {
+public interface SourcePointer<C, SELF extends SourcePointer<C,SELF>> {
     /**
      * Получение символа/лексемы относительно указателя
      * @param offset смещение относительно указателя
