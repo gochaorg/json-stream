@@ -179,19 +179,23 @@ public class QuerySetFin<S extends CharPointer<S>> extends QuerySet<S, QuerySetF
         Iterable<Ast<S>> me = this;
         return new QuerySetFin<>(
             new ExtIterable<Ast<S>>() {
-                private Iterator<Ast<S>> iter;
+                private ImList<Ast<S>> reversedEntries;
+                private ImList<Ast<S>> reversedEntries(){
+                    if( reversedEntries!=null )return reversedEntries;
 
-                @Override
-                public Iterator<Ast<S>> iterator() {
-                    if( iter!=null )return iter;
                     ImList<Ast<S>> lst = ImList.of();
 
                     for( var a : me ){
                         lst = lst.prepend(a);
                     }
 
-                    iter = lst.iterator();
-                    return iter;
+                    reversedEntries = lst;
+                    return reversedEntries;
+                }
+
+                @Override
+                public Iterator<Ast<S>> iterator() {
+                    return reversedEntries().iterator();
                 }
             }
         );
@@ -203,18 +207,22 @@ public class QuerySetFin<S extends CharPointer<S>> extends QuerySet<S, QuerySetF
         Iterable<Ast<S>> me = this;
         return new QuerySetFin<>(
             new ExtIterable<Ast<S>>() {
-                private Iterator<Ast<S>> iter;
+                private List<Ast<S>> sortedEntries;
 
-                @Override
-                public Iterator<Ast<S>> iterator() {
-                    if( iter!=null )return iter;
+                private List<Ast<S>> sortedEntries(){
+                    if( sortedEntries!=null )return sortedEntries;
 
                     List<Ast<S>> entries = new ArrayList<>();
                     me.forEach(entries::add);
                     entries.sort(cmp);
 
-                    iter = entries.iterator();
-                    return iter;
+                    sortedEntries = entries;
+                    return sortedEntries;
+                }
+
+                @Override
+                public Iterator<Ast<S>> iterator() {
+                    return sortedEntries().iterator();
                 }
             }
         );
