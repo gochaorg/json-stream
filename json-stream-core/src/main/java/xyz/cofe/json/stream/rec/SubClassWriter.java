@@ -9,7 +9,7 @@ import xyz.cofe.json.stream.token.StringToken;
 public interface SubClassWriter {
     Ast<DummyCharPointer> write(Ast<DummyCharPointer> ast, Object value, RecMapper mapper);
 
-    static SubClassWriter defaultWriter = conditional(
+    static final SubClassWriter defaultWriter = conditional(
         hasAnySealedInterface(),
         simpleClassName(),
         asIs()

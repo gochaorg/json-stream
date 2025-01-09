@@ -31,12 +31,12 @@ public class RecMapper {
     /**
      * Указывает способ указания подтипа
      */
-    protected final SubClassWriter subClassWriter;
+    protected SubClassWriter subClassWriter;
 
     /**
      * Способ получения имени/типа экземпляра
      */
-    protected final SubClassResolver subClassResolver;
+    protected SubClassResolver subClassResolver;
 
     public RecMapper() {
         this.subClassWriter = SubClassWriter.defaultWriter;
@@ -264,6 +264,12 @@ public class RecMapper {
         return AstWriter.toString(toAst(record));
     }
 
+    /**
+     * Кодирование значения в json string
+     * @param record значение
+     * @param pretty использовать многострочное форматирование
+     * @return json string
+     */
     public String toJson(Object record, boolean pretty) {
         if (record == null) throw new IllegalArgumentException("record==null");
         return AstWriter.toString(toAst(record), pretty);
@@ -320,7 +326,7 @@ public class RecMapper {
         return ImList.of(Ast.KeyValue.create(recJsonName, recJsonValue));
     }
 
-    private Ast<DummyCharPointer> recordToAst(Object record, Class<?> cls) {
+    protected Ast<DummyCharPointer> recordToAst(Object record, Class<?> cls) {
         var items = ImList.<Ast.KeyValue<DummyCharPointer>>of();
         for (var recCmpt : cls.getRecordComponents()) {
             var recName = recCmpt.getName();
