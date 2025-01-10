@@ -8,10 +8,13 @@ import xyz.cofe.json.stream.rec.RecMapError;
 import xyz.cofe.json.stream.rec.RecMapParseError;
 import xyz.cofe.json.stream.rec.RecMapTest;
 import xyz.cofe.json.stream.rec.StdMapper;
+import xyz.cofe.json.stream.rec.SubClassResolver;
+import xyz.cofe.json.stream.rec.SubClassWriter;
 import xyz.cofe.json.stream.token.CharPointer;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -206,5 +209,34 @@ public class StdMapperTest {
         node = mapper.parse(ast, Node.class);
         System.out.println(node);
 
+    }
+
+    @Test
+    public void subTypeWrite(){
+        StdMapper mapper = new StdMapper();
+
+        mapper.subTypeWriter(NodeB.class)
+            .writer(SubClassWriter.simpleClassName( ignr -> "node-b"))
+            .append();
+
+        mapper.subTypeResolve(Node.class)
+            .resolver(SubClassResolver.defaultResolver(
+                Map.of(
+                    "NodeD",NodeD.class,
+                    "NodeA",NodeA.class,
+                    "node-b", NodeB.class
+                )
+            ))
+            .append();
+
+        Node sampleWrite = new NodeD(1, new NodeB("a"), new NodeA());
+
+        var json = mapper.toJson(sampleWrite, true);
+        System.out.println(json);
+
+        Node sampleRead = mapper.parse( json, Node.class);
+        System.out.println(sampleRead);
+
+        assertTrue(sampleRead.equals(sampleWrite));
     }
 }

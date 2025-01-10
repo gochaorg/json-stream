@@ -43,32 +43,115 @@ public class StdMapper extends RecMapper {
         }
 
         recMapperSubClassResolver = this.subClassResolver;
+        subClassResolver = this::resolveSubType;
+
+        recMapperSubClassWriter = this.subClassWriter;
+        subClassWriter = this::writeSubType;
     }
 
+    protected final Map<Class<?>, SubClassWriter> childClassSubTypeWriters = new HashMap<>();
+    protected final SubClassWriter recMapperSubClassWriter;
+    protected SubClassWriter defaultSubClassWriter;
+
+    protected Ast<DummyCharPointer> writeSubType(Ast<DummyCharPointer> ast, Object value, RecMapper mapper, ImList<RecMapper.ToAstStack> stack) {
+        var subClsWr = childClassSubTypeWriters.get(value.getClass());
+        if (subClsWr != null) return subClsWr.write(ast, value, mapper, stack);
+
+        SubClassWriter wr =
+            defaultSubClassWriter != null
+                ? defaultSubClassWriter
+                : recMapperSubClassWriter != null
+                ? recMapperSubClassWriter
+                : SubClassWriter.defaultWriter;
+
+        return wr.write(ast, value, mapper, stack);
+    }
+
+    public class SubTypeWrite {
+        private final Class<?> klass;
+
+        public SubTypeWrite(Class<?> klass) {
+            if( klass==null ) throw new IllegalArgumentException("klass==null");
+            this.klass = klass;
+        }
+
+        public SubTypeFinish writer( SubClassWriter write ){
+            if( write==null ) throw new IllegalArgumentException("write==null");
+            return () -> {
+                childClassSubTypeWriters.put(klass, write);
+                return StdMapper.this;
+            };
+        }
+    }
+
+    public SubTypeWrite subTypeWriter(Class<?> klass){
+        if( klass==null ) throw new IllegalArgumentException("klass==null");
+        return new SubTypeWrite(klass);
+    }
+
+    //region subTypeResolver
     protected final Map<Class<?>, SubClassResolver> perParentClassResolvers = new HashMap<>();
 
     protected final SubClassResolver recMapperSubClassResolver;
+    protected SubClassResolver defaultStdMapperSubClassResolver;
 
     protected Result<SubClassResolver.Resolved, String> resolveSubType(Ast<?> ast, Class<?> parentClass, Class<?>[] subclasses, ImList<RecMapper.ParseStack> stack) {
         var fieldDeserial = stack.fmap(ParseStack.fieldDeserialization.class).head();
-        if( fieldDeserial.isPresent() ){
+        if (fieldDeserial.isPresent()) {
             var fd = fieldDeserial.get();
             var fieldConf = fieldsReadConfig.get(fieldIdOf(fd.field()));
-            if( fieldConf!=null && fieldConf.customSubtypeResolver().isPresent() ){
+            if (fieldConf != null && fieldConf.customSubtypeResolver().isPresent()) {
                 return fieldConf.customSubtypeResolver().get().resolve(ast, parentClass, subclasses, stack);
             }
         }
 
         var custom = perParentClassResolvers.get(parentClass);
-        if( custom!=null ){
-            return custom.resolve(ast,parentClass,subclasses,stack);
+        if (custom != null) {
+            return custom.resolve(ast, parentClass, subclasses, stack);
         }
 
-        SubClassResolver resolver = recMapperSubClassResolver != null ? recMapperSubClassResolver : SubClassResolver.defaultResolver();
+        SubClassResolver resolver = defaultStdMapperSubClassResolver != null
+            ? defaultStdMapperSubClassResolver
+            : recMapperSubClassResolver != null
+            ? recMapperSubClassResolver
+            : SubClassResolver.defaultResolver();
+
         return resolver.resolve(ast, parentClass, subclasses, stack);
     }
 
     protected final Map<Class<?>, SubClassWriter> perChildClassWriter = new HashMap<>();
+
+    public StdMapper subTypeResolver(SubClassResolver resolver) {
+        defaultStdMapperSubClassResolver = resolver;
+        return this;
+    }
+
+    public SubTypeResolve subTypeResolve(Class<?> klass) {
+        if (klass == null) throw new IllegalArgumentException("klass==null");
+        return new SubTypeResolve(klass);
+    }
+
+    public interface SubTypeFinish {
+        public StdMapper append();
+    }
+
+    public class SubTypeResolve {
+        private final Class<?> klass;
+
+        public SubTypeResolve(Class<?> klass) {
+            if (klass == null) throw new IllegalArgumentException("klass==null");
+            this.klass = klass;
+        }
+
+        public SubTypeFinish resolver(SubClassResolver resolver) {
+            if (resolver == null) throw new IllegalArgumentException("resolver==null");
+            return () -> {
+                perParentClassResolvers.put(klass, resolver);
+                return StdMapper.this;
+            };
+        }
+    }
+    //endregion
 
     //region ad hoc
     protected final Set<Class<?>> alreadyConfiguredClasses = new HashSet<>();
@@ -249,7 +332,7 @@ public class StdMapper extends RecMapper {
         public FieldSerialize2(String classOwner, String fieldName, ImList<Function<FieldToJson, Optional<FieldToJson>>> conf) {
             if (classOwner == null) throw new IllegalArgumentException("classOwner==null");
             if (fieldName == null) throw new IllegalArgumentException("fieldName==null");
-            if( conf==null ) throw new IllegalArgumentException("conf==null");
+            if (conf == null) throw new IllegalArgumentException("conf==null");
             this.classOwner = classOwner;
             this.fieldName = fieldName;
             this.conf = conf;
@@ -307,6 +390,11 @@ public class StdMapper extends RecMapper {
         public FieldReadConfig customDeserializer(CustomDeserializer customDeserializer) {
             if (customDeserializer == null) throw new IllegalArgumentException("customDeserializer==null");
             return new FieldReadConfig(resolveField, defaultValue, Optional.of(customDeserializer), customSubtypeResolver);
+        }
+
+        public FieldReadConfig customSubtypeResolver(SubClassResolver resolver) {
+            if (resolver == null) throw new IllegalArgumentException("resolver==null");
+            return new FieldReadConfig(resolveField, defaultValue, customDeserializer, Optional.of(resolver));
         }
     }
 
@@ -479,6 +567,12 @@ public class StdMapper extends RecMapper {
                     return error(new RecMapParseError(err, stack));
                 }
             });
+        }
+
+        public FieldDeserialize subTyping(SubClassResolver resolver) {
+            if (resolver == null) throw new IllegalArgumentException("resolver==null");
+            conf = conf.prepend(fc -> fc.customSubtypeResolver(resolver));
+            return this;
         }
 
         public StdMapper append() {
@@ -666,10 +760,4 @@ public class StdMapper extends RecMapper {
         }
     }
     //endregion
-
-    public StdMapper subTypeWriter(SubClassWriter writer) {
-        if (writer == null) throw new IllegalArgumentException("writer==null");
-        this.subClassWriter = writer;
-        return this;
-    }
 }

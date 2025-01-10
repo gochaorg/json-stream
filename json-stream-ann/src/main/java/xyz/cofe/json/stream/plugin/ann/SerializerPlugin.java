@@ -43,9 +43,9 @@ public class SerializerPlugin implements StdMapperAdHocConfig {
                         @SuppressWarnings("rawtypes") ISerializer iser = ser;
 
                         mapper.fieldSerialize(recordClass, recCmpt.getName())
-                            .valueMapper(obj -> {
+                            .valueMapper((obj,stack) -> {
                                 //noinspection unchecked
-                                return iser.serialize(obj);
+                                return iser.serialize(obj, stack);
                             })
                             .append();
                     }
