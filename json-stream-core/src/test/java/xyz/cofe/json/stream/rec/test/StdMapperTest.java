@@ -95,7 +95,7 @@ public class StdMapperTest {
 
         mapper.fieldSerialize(CustomField.class, "b")
             .rename("bb")
-            .valueMapper( v -> mapper.toAst(v.toString()) )
+            .valueMapper( (v, stack) -> mapper.toAst(v.toString()) )
             .append();
 
         mapper.fieldDeserialize(CustomField.class, "b")

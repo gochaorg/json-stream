@@ -7,10 +7,10 @@ import xyz.cofe.json.stream.ast.Ast;
 public interface SubClassResolver {
     record Resolved(Ast<?> body, Class<?> klass) {}
 
-    Result<Resolved,String> resolve(Ast<?> ast, Class<?>[] subclasses);
+    Result<Resolved,String> resolve(Ast<?> ast, Class<?> parentClass, Class<?>[] subClasses, ImList<RecMapper.ParseStack> stack);
 
     static SubClassResolver defaultResolver(){
-        return (ast, subclasses) -> {
+        return (ast, parentClass, subclasses, stack) -> {
             if( ast instanceof Ast.ObjectAst<?> objAst ) {
                 for (var subCls : subclasses) {
                     var bodyOpt = objAst.get(subCls.getSimpleName());
@@ -29,13 +29,13 @@ public interface SubClassResolver {
 
     static SubClassResolver typeProperty(String propertyName){
         if( propertyName==null ) throw new IllegalArgumentException("propertyName==null");
-        return (ast, subclasses) -> {
+        return (ast, parentClass, subClasses, stack) -> {
             if( ast instanceof Ast.ObjectAst<?> objAst ) {
                 return Result.from(
                     objAst.get(propertyName).flatMap(Ast::asString),
                     ()->"@type not found"
                 ).fmap( typeName -> {
-                    for (var subCls : subclasses) {
+                    for (var subCls : subClasses) {
                         if(subCls.getSimpleName().equals(typeName)){
                             return Result.ok(subCls);
                         }

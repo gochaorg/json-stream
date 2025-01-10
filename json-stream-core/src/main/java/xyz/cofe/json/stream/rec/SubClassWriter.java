@@ -7,7 +7,7 @@ import xyz.cofe.json.stream.token.DummyCharPointer;
 import xyz.cofe.json.stream.token.StringToken;
 
 public interface SubClassWriter {
-    Ast<DummyCharPointer> write(Ast<DummyCharPointer> ast, Object value, RecMapper mapper);
+    Ast<DummyCharPointer> write(Ast<DummyCharPointer> ast, Object value, RecMapper mapper, ImList<RecMapper.ToAstStack> stack);
 
     static final SubClassWriter defaultWriter = conditional(
         hasAnySealedInterface(),
@@ -27,15 +27,18 @@ public interface SubClassWriter {
         if( trueWriter==null ) throw new IllegalArgumentException("trueWriter==null");
         if( falseWriter==null ) throw new IllegalArgumentException("falseWriter==null");
 
-        return (ast, value, mapper) -> condition.apply(value) ? trueWriter.write(ast,value,mapper) : falseWriter.write(ast,value,mapper);
+        return (ast, value, mapper, stack) ->
+            condition.apply(value)
+                ? trueWriter.write(ast,value,mapper,stack)
+                : falseWriter.write(ast,value,mapper,stack);
     }
 
     static SubClassWriter asIs(){
-        return (ast, value, mapper) -> ast;
+        return (ast, value, mapper, stack) -> ast;
     }
 
     static SubClassWriter simpleClassName() {
-        return (ast, value, mapper) -> {
+        return (ast, value, mapper, stack) -> {
             Class<?> cls = value.getClass();
             var name = cls.getSimpleName();
             return Ast.ObjectAst.create(
@@ -47,7 +50,7 @@ public interface SubClassWriter {
 
     static SubClassWriter typeProperty(String propertyName){
         if( propertyName==null ) throw new IllegalArgumentException("propertyName==null");
-        return (ast, value, mapper) -> {
+        return (ast, value, mapper, stack) -> {
             if( ast instanceof Ast.ObjectAst<DummyCharPointer> aObj ){
                 Class<?> cls = value.getClass();
                 var name = cls.getSimpleName();

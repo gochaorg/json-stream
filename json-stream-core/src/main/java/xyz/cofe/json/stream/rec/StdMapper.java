@@ -41,7 +41,34 @@ public class StdMapper extends RecMapper {
         } else {
             adHocConfigs = ImList.of();
         }
+
+        recMapperSubClassResolver = this.subClassResolver;
     }
+
+    protected final Map<Class<?>, SubClassResolver> perParentClassResolvers = new HashMap<>();
+
+    protected final SubClassResolver recMapperSubClassResolver;
+
+    protected Result<SubClassResolver.Resolved, String> resolveSubType(Ast<?> ast, Class<?> parentClass, Class<?>[] subclasses, ImList<RecMapper.ParseStack> stack) {
+        var fieldDeserial = stack.fmap(ParseStack.fieldDeserialization.class).head();
+        if( fieldDeserial.isPresent() ){
+            var fd = fieldDeserial.get();
+            var fieldConf = fieldsReadConfig.get(fieldIdOf(fd.field()));
+            if( fieldConf!=null && fieldConf.customSubtypeResolver().isPresent() ){
+                return fieldConf.customSubtypeResolver().get().resolve(ast, parentClass, subclasses, stack);
+            }
+        }
+
+        var custom = perParentClassResolvers.get(parentClass);
+        if( custom!=null ){
+            return custom.resolve(ast,parentClass,subclasses,stack);
+        }
+
+        SubClassResolver resolver = recMapperSubClassResolver != null ? recMapperSubClassResolver : SubClassResolver.defaultResolver();
+        return resolver.resolve(ast, parentClass, subclasses, stack);
+    }
+
+    protected final Map<Class<?>, SubClassWriter> perChildClassWriter = new HashMap<>();
 
     //region ad hoc
     protected final Set<Class<?>> alreadyConfiguredClasses = new HashSet<>();
@@ -126,14 +153,14 @@ public class StdMapper extends RecMapper {
     ) {}
 
     @Override
-    protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fieldToJson) {
+    protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fieldToJson, ImList<ToAstStack> stack) {
         if (fieldToJson == null) throw new RecMapToAstError(new IllegalArgumentException("fieldToJson==null"));
         adHoc(fieldToJson.recordClass());
         adHoc(fieldToJson.recordComponent().getGenericType());
 
         var fId = fieldIdOf(fieldToJson.recordComponent());
         var fconf = fieldsWriteConfig.get(fId);
-        if (fconf == null) return super.fieldSerialization(fieldToJson);
+        if (fconf == null) return super.fieldSerialization(fieldToJson, stack);
 
         for (var ovr : fconf.override()) {
             var f2jOpt = ovr.apply(fieldToJson);
@@ -142,7 +169,7 @@ public class StdMapper extends RecMapper {
             fieldToJson = f2jOpt.get();
         }
 
-        return super.fieldSerialization(fieldToJson);
+        return super.fieldSerialization(fieldToJson, stack);
     }
 
     public FieldSerialize1 fieldSerialize(Class<?> recordType, String fieldName) {
@@ -181,16 +208,51 @@ public class StdMapper extends RecMapper {
             return this;
         }
 
-        public FieldSerialize1 valueMapper(Function<Object, Ast<DummyCharPointer>> valueMapper) {
+        public FieldSerialize1 valueMapper(BiFunction<Object, ImList<ToAstStack>, Ast<DummyCharPointer>> valueMapper) {
             if (valueMapper == null) throw new IllegalArgumentException("valueMapper==null");
             conf = conf.prepend(f2j -> Optional.of(f2j.valueMapper(valueMapper)));
             return this;
         }
 
-        public FieldSerialize1 keyMapper(Function<String, Ast.Key<DummyCharPointer>> keyMapper) {
+        public FieldSerialize1 keyMapper(BiFunction<String, ImList<ToAstStack>, Ast.Key<DummyCharPointer>> keyMapper) {
             if (keyMapper == null) throw new IllegalArgumentException("keyMapper==null");
             conf = conf.prepend(f2j -> Optional.of(f2j.keyMapper(keyMapper)));
             return this;
+        }
+
+//        public FieldSerialize2 subTyping( SubClassWriter writer ){
+//            if( writer==null ) throw new IllegalArgumentException("writer==null");
+//            return new FieldSerialize2(classOwner, fieldName, conf.prepend( f2j -> {
+//                var original = f2j.valueMapper();
+//                f2j = f2j.valueMapper( obj -> {
+//                    var objWithoutTyping = original.apply(obj);
+//                    return writer.write(objWithoutTyping, obj, StdMapper.this);
+//                });
+//                return Optional.of(f2j);
+//            }));
+//        }
+
+        public StdMapper append() {
+            fieldsWriteConfig.put(
+                fieldIdOf(classOwner, fieldName),
+                new FieldWriteConfig(conf.reverse())
+            );
+            return StdMapper.this;
+        }
+    }
+
+    public class FieldSerialize2 {
+        private final String classOwner;
+        private final String fieldName;
+        private ImList<Function<FieldToJson, Optional<FieldToJson>>> conf = ImList.of();
+
+        public FieldSerialize2(String classOwner, String fieldName, ImList<Function<FieldToJson, Optional<FieldToJson>>> conf) {
+            if (classOwner == null) throw new IllegalArgumentException("classOwner==null");
+            if (fieldName == null) throw new IllegalArgumentException("fieldName==null");
+            if( conf==null ) throw new IllegalArgumentException("conf==null");
+            this.classOwner = classOwner;
+            this.fieldName = fieldName;
+            this.conf = conf;
         }
 
         public StdMapper append() {
@@ -220,10 +282,12 @@ public class StdMapper extends RecMapper {
     public record FieldReadConfig(
         Optional<Function<ResolveField, Result<? extends Ast<?>, RequiredFiled>>> resolveField,
         Optional<Function<DefaultFieldValue, Result<Object, RecMapParseError>>> defaultValue,
-        Optional<CustomDeserializer> customDeserializer
+        Optional<CustomDeserializer> customDeserializer,
+        Optional<SubClassResolver> customSubtypeResolver
     ) {
         public static FieldReadConfig empty() {
             return new FieldReadConfig(
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty()
@@ -232,17 +296,17 @@ public class StdMapper extends RecMapper {
 
         public FieldReadConfig resolveField(Function<ResolveField, Result<? extends Ast<?>, RequiredFiled>> resolveField) {
             if (resolveField == null) throw new IllegalArgumentException("resolveField==null");
-            return new FieldReadConfig(Optional.of(resolveField), defaultValue, customDeserializer);
+            return new FieldReadConfig(Optional.of(resolveField), defaultValue, customDeserializer, customSubtypeResolver);
         }
 
         public FieldReadConfig defaultValue(Function<DefaultFieldValue, Result<Object, RecMapParseError>> defaultValue) {
             if (defaultValue == null) throw new IllegalArgumentException("defaultValue==null");
-            return new FieldReadConfig(resolveField, Optional.of(defaultValue), customDeserializer);
+            return new FieldReadConfig(resolveField, Optional.of(defaultValue), customDeserializer, customSubtypeResolver);
         }
 
         public FieldReadConfig customDeserializer(CustomDeserializer customDeserializer) {
             if (customDeserializer == null) throw new IllegalArgumentException("customDeserializer==null");
-            return new FieldReadConfig(resolveField, defaultValue, Optional.of(customDeserializer));
+            return new FieldReadConfig(resolveField, defaultValue, Optional.of(customDeserializer), customSubtypeResolver);
         }
     }
 
@@ -260,8 +324,8 @@ public class StdMapper extends RecMapper {
     protected Result<? extends Ast<?>, RequiredFiled> resolveFieldOf(
         Ast.ObjectAst<?> objectAst, RecordComponent field, ImList<ParseStack> stack) {
 
-        adHoc( field.getDeclaringRecord() );
-        adHoc( field.getGenericType() );
+        adHoc(field.getDeclaringRecord());
+        adHoc(field.getGenericType());
 
         var fconf = fieldsReadConfig.get(fieldIdOf(field));
         if (fconf != null && fconf.resolveField.isPresent()) {
@@ -358,61 +422,61 @@ public class StdMapper extends RecMapper {
             return this;
         }
 
-        public FieldDeserialize defaults(Function<DefaultFieldValue, Result<Object, RecMapParseError>> defValue){
-            if( defValue==null ) throw new IllegalArgumentException("defValue==null");
-            conf = conf.prepend( cfg -> cfg.defaultValue(defValue) );
+        public FieldDeserialize defaults(Function<DefaultFieldValue, Result<Object, RecMapParseError>> defValue) {
+            if (defValue == null) throw new IllegalArgumentException("defValue==null");
+            conf = conf.prepend(cfg -> cfg.defaultValue(defValue));
             return this;
         }
 
-        public FieldDeserialize defaults(Result<Object, RecMapParseError> defValue){
-            if( defValue==null ) throw new IllegalArgumentException("defValue==null");
-            conf = conf.prepend( cfg -> cfg.defaultValue( ignore -> defValue) );
+        public FieldDeserialize defaults(Result<Object, RecMapParseError> defValue) {
+            if (defValue == null) throw new IllegalArgumentException("defValue==null");
+            conf = conf.prepend(cfg -> cfg.defaultValue(ignore -> defValue));
             return this;
         }
 
-        public FieldDeserialize defaultValue(Object defValue){
-            if( defValue==null ) throw new IllegalArgumentException("defValue==null");
-            conf = conf.prepend( cfg -> cfg.defaultValue( ignore -> ok(defValue)) );
+        public FieldDeserialize defaultValue(Object defValue) {
+            if (defValue == null) throw new IllegalArgumentException("defValue==null");
+            conf = conf.prepend(cfg -> cfg.defaultValue(ignore -> ok(defValue)));
             return this;
         }
 
-        public FieldDeserialize deserialize( CustomDeserializer deSer ){
-            if( deSer==null ) throw new IllegalArgumentException("deSer==null");
-            conf = conf.prepend( cfg -> cfg.customDeserializer(deSer) );
+        public FieldDeserialize deserialize(CustomDeserializer deSer) {
+            if (deSer == null) throw new IllegalArgumentException("deSer==null");
+            conf = conf.prepend(cfg -> cfg.customDeserializer(deSer));
             return this;
         }
 
-        public FieldDeserialize deserialize( BiFunction<Ast<?>, ImList<RecMapper.ParseStack>, Result<Object, RecMapParseError>> deserializer ){
-            if( deserializer==null ) throw new IllegalArgumentException("deserializer==null");
-            conf = conf.prepend( cfg -> cfg.customDeserializer(new CustomDeserializer(deserializer)) );
+        public FieldDeserialize deserialize(BiFunction<Ast<?>, ImList<RecMapper.ParseStack>, Result<Object, RecMapParseError>> deserializer) {
+            if (deserializer == null) throw new IllegalArgumentException("deserializer==null");
+            conf = conf.prepend(cfg -> cfg.customDeserializer(new CustomDeserializer(deserializer)));
             return this;
         }
 
-        public FieldDeserialize parser( BiFunction<Ast<?>,ImList<RecMapper.ParseStack>, Object> parser ){
-            return deserialize( (ast, stack) -> {
+        public FieldDeserialize parser(BiFunction<Ast<?>, ImList<RecMapper.ParseStack>, Object> parser) {
+            return deserialize((ast, stack) -> {
                 try {
-                    return ok( parser.apply(ast,stack) );
-                } catch (Throwable err){
-                    if( err instanceof RecMapParseError e ){
+                    return ok(parser.apply(ast, stack));
+                } catch (Throwable err) {
+                    if (err instanceof RecMapParseError e) {
                         return error(e);
                     }
-                    return error( new RecMapParseError(err, stack) );
+                    return error(new RecMapParseError(err, stack));
                 }
             });
         }
 
-        public FieldDeserialize parser( Function<Ast<?>, Object> parser ){
-            return deserialize( (ast, stack) -> {
+        public FieldDeserialize parser(Function<Ast<?>, Object> parser) {
+            return deserialize((ast, stack) -> {
                 try {
-                    return ok( parser.apply(ast) );
-                } catch (Throwable err){
-                    if( err instanceof RecMapParseError e ){
-                        if( e.getParseStack().isEmpty() && stack.isNonEmpty() ){
+                    return ok(parser.apply(ast));
+                } catch (Throwable err) {
+                    if (err instanceof RecMapParseError e) {
+                        if (e.getParseStack().isEmpty() && stack.isNonEmpty()) {
                             return error(new RecMapParseError(e, stack));
                         }
                         return error(e);
                     }
-                    return error( new RecMapParseError(err, stack) );
+                    return error(new RecMapParseError(err, stack));
                 }
             });
         }
@@ -453,7 +517,7 @@ public class StdMapper extends RecMapper {
     protected Set<Class<?>> defaultSerializer = new HashSet<>();
 
     @Override
-    protected Optional<Ast<DummyCharPointer>> customObjectSerialize(Object someObj) {
+    protected Optional<Ast<DummyCharPointer>> customObjectSerialize(Object someObj, ImList<ToAstStack> stack) {
         if (someObj == null) return Optional.empty();
 
         var cls = someObj.getClass();
@@ -552,11 +616,11 @@ public class StdMapper extends RecMapper {
 
     @Override
     public <T> Result<T, RecMapParseError> tryParse(Ast<?> ast, Type type, ImList<ParseStack> stack) {
-        if( ast!=null && type!=null ) {
+        if (ast != null && type != null) {
             //noinspection SuspiciousMethodCalls
             var dser = deserializers.get(type);
-            if( dser!=null )//noinspection unchecked
-                return dser.deserializer.apply(ast,stack).map( v -> (T)v );
+            if (dser != null)//noinspection unchecked
+                return dser.deserializer.apply(ast, stack).map(v -> (T) v);
         }
 
         return super.tryParse(ast, type, stack);
@@ -564,10 +628,10 @@ public class StdMapper extends RecMapper {
 
     @Override
     public <T> Result<T, RecMapParseError> tryParse(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
-        if( ast!=null && cls!=null ) {
+        if (ast != null && cls != null) {
             var dser = deserializers.get(cls);
-            if( dser!=null )//noinspection unchecked
-                return dser.deserializer.apply(ast,stack).map( v -> (T)v );
+            if (dser != null)//noinspection unchecked
+                return dser.deserializer.apply(ast, stack).map(v -> (T) v);
         }
 
         return super.tryParse(ast, cls, stack);
@@ -603,8 +667,8 @@ public class StdMapper extends RecMapper {
     }
     //endregion
 
-    public StdMapper subTypeWriter(SubClassWriter writer){
-        if( writer==null ) throw new IllegalArgumentException("writer==null");
+    public StdMapper subTypeWriter(SubClassWriter writer) {
+        if (writer == null) throw new IllegalArgumentException("writer==null");
         this.subClassWriter = writer;
         return this;
     }

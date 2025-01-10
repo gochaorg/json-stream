@@ -60,7 +60,28 @@ public class RecMapper {
         this.subClassResolver = subClassResolver;
     }
 
+    public interface ToAstStack {
+        record toAstString(String value) implements ToAstStack {}
+        record toAstIdent(String value) implements ToAstStack {}
+        record toAstNull() implements ToAstStack {}
+        record toAstChar(char value) implements ToAstStack {}
+        record toAstByte(byte value) implements ToAstStack {}
+        record toAstShort(short value) implements ToAstStack {}
+        record toAstInt(int value) implements ToAstStack {}
+        record toAstLong(long value) implements ToAstStack {}
+        record toAstBigInt(BigInteger value) implements ToAstStack {}
+        record toAstFloat(float value) implements ToAstStack {}
+        record toAstDouble(double value) implements ToAstStack {}
+        record toAstBool(boolean value) implements ToAstStack {}
+        record toAst(Object value) implements ToAstStack {}
+        record fieldSerialization(FieldToJson value) implements ToAstStack {}
+        record recordToAst(Object record, Class<?> cls) implements ToAstStack {}
+        record iterableToAst(Iterable<?> iterable) implements ToAstStack {}
+        record arrayToAst(Object array) implements ToAstStack {}
+    }
+
     //region toAst() primitives
+    //region string
 
     /**
      * Формирование AST узла
@@ -69,8 +90,14 @@ public class RecMapper {
      * @return узел ast
      */
     public Ast.StringAst<DummyCharPointer> toAst(String value) {
+        return toAst(value, ImList.of(new ToAstStack.toAstString(value)));
+    }
+
+    protected Ast.StringAst<DummyCharPointer> toAst(String value, ImList<ToAstStack> stack) {
         return Ast.StringAst.create(value);
     }
+    //endregion
+    //region char
 
     /**
      * Формирование AST узла
@@ -79,8 +106,14 @@ public class RecMapper {
      * @return узел ast
      */
     public Ast.StringAst<DummyCharPointer> toAst(char value) {
+        return toAst(value, ImList.of(new ToAstStack.toAstChar(value)));
+    }
+
+    protected Ast.StringAst<DummyCharPointer> toAst(char value, ImList<ToAstStack> stack) {
         return Ast.StringAst.create("" + value);
     }
+    //endregion
+    //region byte
 
     /**
      * Формирование AST узла
@@ -89,8 +122,14 @@ public class RecMapper {
      * @return узел ast
      */
     public Ast.NumberAst.IntAst<DummyCharPointer> toAst(byte value) {
+        return toAst(value, ImList.of(new ToAstStack.toAstByte(value)));
+    }
+
+    protected Ast.NumberAst.IntAst<DummyCharPointer> toAst(byte value, ImList<ToAstStack> stack) {
         return Ast.NumberAst.IntAst.create(0xFF & value);
     }
+    //endregion
+    //region short
 
     /**
      * Формирование AST узла
@@ -99,8 +138,14 @@ public class RecMapper {
      * @return узел ast
      */
     public Ast.NumberAst.IntAst<DummyCharPointer> toAst(short value) {
+        return toAst(value, ImList.of(new ToAstStack.toAstShort(value)));
+    }
+
+    protected Ast.NumberAst.IntAst<DummyCharPointer> toAst(short value, ImList<ToAstStack> stack) {
         return Ast.NumberAst.IntAst.create(value);
     }
+    //endregion
+    //region int
 
     /**
      * Формирование AST узла
@@ -109,8 +154,14 @@ public class RecMapper {
      * @return узел ast
      */
     public Ast.NumberAst.IntAst<DummyCharPointer> toAst(int value) {
+        return toAst(value, ImList.of(new ToAstStack.toAstInt(value)));
+    }
+
+    protected Ast.NumberAst.IntAst<DummyCharPointer> toAst(int value, ImList<ToAstStack> stack) {
         return Ast.NumberAst.IntAst.create(value);
     }
+    //endregion
+    //region long
 
     /**
      * Формирование AST узла
@@ -119,8 +170,14 @@ public class RecMapper {
      * @return узел ast
      */
     public Ast.NumberAst.LongAst<DummyCharPointer> toAst(long value) {
+        return toAst(value, ImList.of(new ToAstStack.toAstLong(value)));
+    }
+
+    protected Ast.NumberAst.LongAst<DummyCharPointer> toAst(long value, ImList<ToAstStack> stack) {
         return Ast.NumberAst.LongAst.create(value);
     }
+    //endregion
+    //region BigInteger
 
     /**
      * Формирование AST узла
@@ -129,8 +186,14 @@ public class RecMapper {
      * @return узел ast
      */
     public Ast.NumberAst.BigIntAst<DummyCharPointer> toAst(BigInteger value) {
+        return toAst(value, ImList.of(new ToAstStack.toAstBigInt(value)));
+    }
+
+    protected Ast.NumberAst.BigIntAst<DummyCharPointer> toAst(BigInteger value, ImList<ToAstStack> stack) {
         return Ast.NumberAst.BigIntAst.create(value);
     }
+    //endregion
+    //region float
 
     /**
      * Формирование AST узла
@@ -139,8 +202,14 @@ public class RecMapper {
      * @return узел ast
      */
     public Ast.NumberAst.DoubleAst<DummyCharPointer> toAst(float value) {
+        return toAst(value, ImList.of(new ToAstStack.toAstFloat(value)));
+    }
+
+    protected Ast.NumberAst.DoubleAst<DummyCharPointer> toAst(float value, ImList<ToAstStack> stack) {
         return Ast.NumberAst.DoubleAst.create(value);
     }
+    //endregion
+    //region double
 
     /**
      * Формирование AST узла
@@ -149,8 +218,20 @@ public class RecMapper {
      * @return узел ast
      */
     public Ast.NumberAst.DoubleAst<DummyCharPointer> toAst(double value) {
+        return toAst(value, ImList.of(new ToAstStack.toAstDouble(value)));
+    }
+
+    /**
+     * Формирование AST узла
+     *
+     * @param value значение узла
+     * @return узел ast
+     */
+    protected Ast.NumberAst.DoubleAst<DummyCharPointer> toAst(double value, ImList<ToAstStack> stack) {
         return Ast.NumberAst.DoubleAst.create(value);
     }
+    //endregion
+    //region boolean
 
     /**
      * Формирование AST узла
@@ -159,8 +240,14 @@ public class RecMapper {
      * @return узел ast
      */
     public Ast.BooleanAst<DummyCharPointer> toAst(boolean value) {
+        return toAst(value, ImList.of(new ToAstStack.toAstBool(value)));
+    }
+
+    protected Ast.BooleanAst<DummyCharPointer> toAst(boolean value, ImList<ToAstStack> stack) {
         return Ast.NumberAst.BooleanAst.create(value);
     }
+    //endregion
+    //region null
 
     /**
      * Формирование AST узла
@@ -168,8 +255,19 @@ public class RecMapper {
      * @return узел ast
      */
     public Ast.NullAst<DummyCharPointer> nullToAst() {
+        return nullToAst(ImList.of(new ToAstStack.toAstNull()));
+    }
+
+    /**
+     * Формирование AST узла
+     *
+     * @return узел ast
+     */
+    protected Ast.NullAst<DummyCharPointer> nullToAst(ImList<ToAstStack> stack) {
         return Ast.NumberAst.NullAst.create();
     }
+    //endregion
+    //region ident
 
     /**
      * Формирование AST узла
@@ -178,79 +276,90 @@ public class RecMapper {
      * @return узел ast
      */
     public Ast.IdentAst<DummyCharPointer> identToAst(String value) {
+        return identToAst(value, ImList.of(new ToAstStack.toAstIdent(value)));
+    }
+
+    protected Ast.IdentAst<DummyCharPointer> identToAst(String value, ImList<ToAstStack> stack) {
         return Ast.NumberAst.IdentAst.create(value);
     }
     //endregion
+    //endregion
 
     //region enumToAst()
-    private Ast<DummyCharPointer> enumToAst(Enum<?> value) {
+    protected Ast<DummyCharPointer> enumToAst(Enum<?> value) {
         return Ast.StringAst.create(value.name());
     }
     //endregion
 
     //region toAst() containers
-    protected Optional<Ast<DummyCharPointer>> customObjectSerialize(Object record) {
+    protected Optional<Ast<DummyCharPointer>> customObjectSerialize(Object record, ImList<ToAstStack> stack) {
         return Optional.empty();
     }
 
     /**
      * Формирование Ast
      *
-     * @param record значение
+     * @param value значение
      * @return узел ast
      */
-    public Ast<DummyCharPointer> toAst(Object record) {
-        var custom = customObjectSerialize(record);
+    public Ast<DummyCharPointer> toAst(Object value) {
+        return toAst(value, ImList.of(new ToAstStack.toAst(value)));
+    }
+
+    protected Ast<DummyCharPointer> toAst(Object record, ImList<ToAstStack> stack) {
+        stack = stack.prepend(new ToAstStack.toAst(record));
+
+        var custom = customObjectSerialize(record, stack);
         if (custom.isPresent()) {
             return custom.get();
         }
 
-        if (record == null) return nullToAst();
+        if (record == null) return nullToAst(stack);
 
         Class<?> cls = record.getClass();
         if (cls.isRecord()) {
-            return recordToAst(record, cls);
+            return recordToAst(record, cls, stack);
         }
 
         if (record instanceof Iterable<?> iter) {
-            return iterableToAst(iter);
+            return iterableToAst(iter, stack);
         }
 
-        if (cls.isArray()) return arrayToAst(record);
+        if (cls.isArray()) return arrayToAst(record, stack);
 
         if (cls.isEnum()) return enumToAst((Enum<?>) record);
 
         if (record instanceof Boolean)
-            return toAst((boolean) (Boolean) record);
+            return toAst((boolean) (Boolean) record, stack);
 
         if (record instanceof String)
-            return toAst((String) record);
+            return toAst((String) record, stack);
 
         if (record instanceof Character)
-            return toAst("" + (Character) record);
+            return toAst("" + (Character) record, stack);
 
         if (record instanceof Integer)
-            return toAst((int) (Integer) record);
+            return toAst((int) (Integer) record, stack);
 
         if (record instanceof Byte)
-            return toAst(0xFF & ((byte) (Byte) record));
+            return toAst(0xFF & ((byte) (Byte) record), stack);
 
         if (record instanceof Short)
-            return toAst((int) (Short) record);
+            return toAst((int) (Short) record, stack);
 
         if (record instanceof Long)
-            return toAst((long) (Long) record);
+            return toAst((long) (Long) record, stack);
 
         if (record instanceof Double)
-            return toAst((double) (Double) record);
+            return toAst((double) (Double) record, stack);
 
         if (record instanceof Float)
-            return toAst((double) (Float) record);
+            return toAst((double) (Float) record, stack);
 
         if (record instanceof BigInteger)
-            return toAst((BigInteger) record);
+            return toAst((BigInteger) record, stack);
 
-        throw new RecMapError("can't serialize " + cls);
+        throw new RecMapToAstError("can't serialize " + cls, stack);
     }
 
     /**
@@ -266,6 +375,7 @@ public class RecMapper {
 
     /**
      * Кодирование значения в json string
+     *
      * @param record значение
      * @param pretty использовать многострочное форматирование
      * @return json string
@@ -292,41 +402,49 @@ public class RecMapper {
         String fieldName,
         Object fieldValue,
         RecordComponent recordComponent,
-        Function<String, Ast.Key<DummyCharPointer>> keyMapper,
-        Function<Object, Ast<DummyCharPointer>> valueMapper
+        BiFunction<String, ImList<ToAstStack>, Ast.Key<DummyCharPointer>> keyMapper,
+        BiFunction<Object, ImList<ToAstStack>, Ast<DummyCharPointer>> valueMapper
     ) {
         public FieldToJson fieldName(String name) {
             if (name == null) throw new IllegalArgumentException("name==null");
             return new FieldToJson(record, recordClass, name, fieldValue, recordComponent, keyMapper, valueMapper);
         }
 
-        public FieldToJson keyMapper(Function<String, Ast.Key<DummyCharPointer>> keyMapper) {
+        public FieldToJson keyMapper(BiFunction<String, ImList<ToAstStack>, Ast.Key<DummyCharPointer>> keyMapper) {
             if (keyMapper == null) throw new IllegalArgumentException("keyMapper==null");
             return new FieldToJson(record, recordClass, fieldName, fieldValue, recordComponent, keyMapper, valueMapper);
         }
 
-        public FieldToJson valueMapper(Function<Object, Ast<DummyCharPointer>> valueMapper) {
+        public FieldToJson valueMapper(BiFunction<Object, ImList<ToAstStack>, Ast<DummyCharPointer>> valueMapper) {
             if (keyMapper == null) throw new IllegalArgumentException("keyMapper==null");
             return new FieldToJson(record, recordClass, fieldName, fieldValue, recordComponent, keyMapper, valueMapper);
         }
     }
 
     @SuppressWarnings({"unused", "OptionalGetWithoutIsPresent"})
-    protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fieldToJson) {
+    protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fieldToJson, ImList<ToAstStack> stack) {
         if (fieldToJson.fieldValue() == null) return ImList.of();
         if (fieldToJson.fieldValue() instanceof Optional<?> opt && opt.isEmpty()) return ImList.of();
+
+        stack = stack.prepend(new ToAstStack.fieldSerialization(fieldToJson));
 
         var recJsonValue =
             fieldToJson
                 .valueMapper().apply(
-                    fieldToJson.fieldValue() instanceof Optional<?> opt ? opt.get() : fieldToJson.fieldValue());
+                    fieldToJson.fieldValue() instanceof Optional<?> opt
+                        ? opt.get()
+                        : fieldToJson.fieldValue(),
+                    stack
+                );
 
-        var recJsonName = fieldToJson.keyMapper.apply(fieldToJson.fieldName());
+        var recJsonName = fieldToJson.keyMapper.apply(fieldToJson.fieldName(), stack);
 
         return ImList.of(Ast.KeyValue.create(recJsonName, recJsonValue));
     }
 
-    protected Ast<DummyCharPointer> recordToAst(Object record, Class<?> cls) {
+    protected Ast<DummyCharPointer> recordToAst(Object record, Class<?> cls, ImList<ToAstStack> stack) {
+        stack = stack.prepend(new ToAstStack.recordToAst(record,cls));
+
         var items = ImList.<Ast.KeyValue<DummyCharPointer>>of();
         for (var recCmpt : cls.getRecordComponents()) {
             var recName = recCmpt.getName();
@@ -335,7 +453,7 @@ public class RecMapper {
 
                 var f2j = fieldSerialization(new FieldToJson(
                     record, cls, recName, recValue, recCmpt, this::toAst, this::toAst
-                ));
+                ), stack);
 
                 if (f2j.isEmpty()) continue;
                 items = items.append(f2j);
@@ -347,25 +465,30 @@ public class RecMapper {
         return subClassWriter.write(
             Ast.ObjectAst.create(items),
             record,
-            this
+            this,
+            stack
         );
     }
 
-    private Ast<DummyCharPointer> iterableToAst(Iterable<?> iterable) {
+    protected Ast<DummyCharPointer> iterableToAst(Iterable<?> iterable, ImList<ToAstStack> stack) {
+        stack = stack.prepend(new ToAstStack.iterableToAst(iterable));
+
         ImList<Ast<DummyCharPointer>> lst = ImList.of();
         for (var it : iterable) {
-            var a = toAst(it);
+            var a = toAst(it,stack);
             lst = lst.prepend(a);
         }
         return Ast.ArrayAst.create(lst.reverse());
     }
 
-    private Ast<DummyCharPointer> arrayToAst(Object array) {
+    protected Ast<DummyCharPointer> arrayToAst(Object array, ImList<ToAstStack> stack) {
+        stack = stack.prepend(new ToAstStack.arrayToAst(array));
+
         ImList<Ast<DummyCharPointer>> lst = ImList.of();
         var arrLen = Array.getLength(array);
         for (var ai = 0; ai < arrLen; ai++) {
             lst = lst.prepend(
-                toAst(Array.get(array, ai))
+                toAst(Array.get(array, ai),stack)
             );
         }
         return Ast.ArrayAst.create(lst.reverse());
@@ -392,6 +515,7 @@ public class RecMapper {
         record parseRecord<T>(Ast.ObjectAst<?> objAst, Class<T> recordClass) implements ParseStack {}
         record parseEnum<T>(Ast<?> ast, Class<T> enumCls) implements ParseStack {}
         record parserOf(Type type) implements ParseStack {}
+        record fieldDeserialization(Ast<?> ast, RecordComponent field) implements ParseStack {}
     }
 
     /**
@@ -519,7 +643,7 @@ public class RecMapper {
     }
 
     protected <T> Optional<T> optionalParse(Ast<?> ast, BiFunction<Ast<?>, ImList<ParseStack>, T> itemParse, ImList<ParseStack> stack) {
-        if (ast instanceof Ast.NullAst<?> nullAst) {
+        if (ast instanceof Ast.NullAst<?>) {
             return Optional.empty();
         }
 
@@ -683,7 +807,7 @@ public class RecMapper {
     protected <T> Result<T, RecMapParseError> parseSealedInterface(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
         var stack1 = stack.prepend(new ParseStack.parseSealedInterface<T>(ast, cls));
 
-        return subClassResolver.resolve(ast, cls.getPermittedSubclasses())
+        return subClassResolver.resolve(ast, cls, cls.getPermittedSubclasses(), stack1)
             .mapErr(e -> new RecMapParseError(e, stack1))
             .fmap(resolved ->
                 this.<T>parseSubclass(
@@ -714,7 +838,9 @@ public class RecMapper {
         return tryParse(
             ast,
             field.getGenericType(),
-            stack
+            stack.prepend(
+                new ParseStack.fieldDeserialization(ast, field)
+            )
         );
     }
 
@@ -752,8 +878,8 @@ public class RecMapper {
         return error(
             new RecMapParseError(
                 requiredFiled
-                    .map( rf -> "expect field " + requiredFiled + " in json " + objectAst)
-                    .orElse("field not found (or null) in json "+objectAst)
+                    .map(rf -> "expect field " + requiredFiled + " in json " + objectAst)
+                    .orElse("field not found (or null) in json " + objectAst)
                 ,
                 stack
             )
@@ -779,8 +905,6 @@ public class RecMapper {
         var recValues = new Object[recComponents.length];
 
         for (var ri = 0; ri < recComponents.length; ri++) {
-            var name = recComponents[ri].getName();
-
             var recClass = recComponents[ri].getType();
             recComponentClasses[ri] = recClass;
 
@@ -796,7 +920,6 @@ public class RecMapper {
                     .fold(v -> v, v2 -> false);
 
             if (fieldAstRes.isError() || isNullAst) {
-                //noinspection OptionalGetWithoutIsPresent
                 var resolveEmpty =
                     isNullAst
                         ?

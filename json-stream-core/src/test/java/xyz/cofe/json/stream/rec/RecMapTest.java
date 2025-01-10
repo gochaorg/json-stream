@@ -42,6 +42,17 @@ public class RecMapTest {
     }
 
     @Test
+    public void test2() {
+        RecMapper mapper = new RecMapper();
+
+        var json = mapper.toJson(new NodeC(1, new NodeB("b")));
+        System.out.println(json);
+
+        Node restored = mapper.parse(json, Node.class);
+        System.out.println(restored);
+    }
+
+    @Test
     public void test1() {
         RecMapper mapper = new RecMapper();
 
@@ -209,11 +220,11 @@ public class RecMapTest {
     public void skipFieldSerialization() {
         RecMapper mapper = new RecMapper() {
             @Override
-            protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fld) {
+            protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fld, ImList<ToAstStack> stack) {
                 return
                     fld.fieldName().equals("c") && fld.recordClass() == NodeC.class
                         ? ImList.of()
-                        : super.fieldSerialization(fld);
+                        : super.fieldSerialization(fld, stack);
             }
         };
 
@@ -252,10 +263,10 @@ public class RecMapTest {
         };
 
         Node node =
-        mapper.parse(
-            """
-                { "NodeB": {} }
-                """, Node.class);
+            mapper.parse(
+                """
+                    { "NodeB": {} }
+                    """, Node.class);
 
         assertTrue(node instanceof NodeB);
         NodeB nb = (NodeB) node;
@@ -267,11 +278,12 @@ public class RecMapTest {
     public void renameFieldSerialization() {
         RecMapper mapper = new RecMapper() {
             @Override
-            protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fld) {
+            protected ImList<Ast.KeyValue<DummyCharPointer>> fieldSerialization(FieldToJson fld, ImList<ToAstStack> stack) {
                 return super.fieldSerialization(
                     fld.fieldName().equals("c") && fld.recordClass() == NodeC.class
                         ? fld.fieldName("cc")
                         : fld
+                    , stack
                 );
             }
         };
@@ -332,7 +344,7 @@ public class RecMapTest {
             SubClassResolver.defaultResolver()
         ) {
             @Override
-            protected Optional<Ast<DummyCharPointer>> customObjectSerialize(Object obj) {
+            protected Optional<Ast<DummyCharPointer>> customObjectSerialize(Object obj, ImList<ToAstStack> stacks) {
                 return obj instanceof LocalDateTime ld
                     ? Optional.of(toAst(ld.toString()))
                     : Optional.empty();
@@ -366,29 +378,29 @@ public class RecMapTest {
     public record LstOfStr(ImList<String> lst) {}
 
     @Test
-    public void serializeList1(){
+    public void serializeList1() {
         RecMapper mapper = new RecMapper();
 
-        ImList<String> lst = ImList.of("a","b");
+        ImList<String> lst = ImList.of("a", "b");
         var ast = mapper.toAst(lst);
-        var json = AstWriter.toString(ast,true);
+        var json = AstWriter.toString(ast, true);
         System.out.println(json);
 
         try {
             var lst2 = mapper.parse(ast, ImList.class);
             System.out.println(lst2);
-        } catch (RecMapParseError e){
+        } catch (RecMapParseError e) {
             assertTrue(e.getMessage().contains("unsupported"));
         }
     }
 
     @Test
-    public void serializeList2(){
+    public void serializeList2() {
         RecMapper mapper = new RecMapper();
 
-        ImList<String> lst = ImList.of("a","b");
+        ImList<String> lst = ImList.of("a", "b");
         var ast = mapper.toAst(new LstOfStr(lst));
-        var json = AstWriter.toString(ast,true);
+        var json = AstWriter.toString(ast, true);
         System.out.println(json);
 
         var lst2 = mapper.parse(ast, LstOfStr.class);
@@ -398,12 +410,12 @@ public class RecMapTest {
     public record Autonom(String a, int b) {}
 
     @Test
-    public void autonom1(){
+    public void autonom1() {
         RecMapper mapper = new RecMapper();
 
-        var sample1  = new Autonom("a",1);
+        var sample1 = new Autonom("a", 1);
         var ast = mapper.toAst(sample1);
-        System.out.println(AstWriter.toString(ast,true));
+        System.out.println(AstWriter.toString(ast, true));
 
         var sample2 = mapper.parse(ast, Autonom.class);
         assertTrue(sample2.equals(sample1));
@@ -412,25 +424,25 @@ public class RecMapTest {
     public record AutonomList(ImList<Autonom> lst) {}
 
     @Test
-    public void autonom2(){
+    public void autonom2() {
         RecMapper mapper = new RecMapper();
 
-        var sample1  =
+        var sample1 =
             new AutonomList(
                 ImList.of(
-                    new Autonom("a",1),
-                    new Autonom("b",2),
-                    new Autonom("c",3)
+                    new Autonom("a", 1),
+                    new Autonom("b", 2),
+                    new Autonom("c", 3)
                 )
             );
         var ast = mapper.toAst(sample1);
-        System.out.println(AstWriter.toString(ast,true));
+        System.out.println(AstWriter.toString(ast, true));
 
         var sample2 = mapper.parse(ast, AutonomList.class);
         assertTrue(sample2.lst.size() == (sample1.lst.size()));
         assertTrue(
             sample2.lst.zip(sample1.lst)
-                .foldLeft( true, (sum,it) -> sum && it.map((a,b) -> a.equals(b)))
+                .foldLeft(true, (sum, it) -> sum && it.map((a, b) -> a.equals(b)))
         );
     }
 }
