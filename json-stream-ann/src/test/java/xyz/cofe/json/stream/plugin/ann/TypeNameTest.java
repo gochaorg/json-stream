@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SuppressWarnings("SimplifiableAssertion")
 public class TypeNameTest {
     public sealed interface Node {
-        @TypeName("nOde-A")
+        @TypeName()
         record NodeA() implements Node {}
         record NodeB() implements Node {}
         @TypeName(value = {"NC","nc"},writeName = "Nc")
@@ -17,7 +17,7 @@ public class TypeNameTest {
     }
 
     @Test
-    public void test(){
+    public void test1(){
         StdMapper mapper = new StdMapper();
 
         Node sampleWrite = new Node.NodeD(
