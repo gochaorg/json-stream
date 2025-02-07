@@ -139,6 +139,8 @@ public class StdMapperTest {
 Подключить пакет maven
 -------------
 
+**Основное ядро**
+
 ```xml
 <dependency>
     <groupId>xyz.cofe</groupId>
@@ -147,8 +149,28 @@ public class StdMapperTest {
 </dependency>
 ```
 
+**Поддержка аннотаций**
+
+```xml
+<dependency>
+    <groupId>xyz.cofe</groupId>
+    <artifactId>json-stream-ann</artifactId>
+    <version>версия</version>
+</dependency>
+```
+
+**Поддержка java/jre типов (даты,url,...)**
+
+```xml
+<dependency>
+    <groupId>xyz.cofe</groupId>
+    <artifactId>json-jre-types</artifactId>
+    <version>версия</version>
+</dependency>
+```
+
 Возможности
---------------------
+=============================
 
 - Лексический анализатор json
   - [Синтаксис](json-syntax.md) 
@@ -157,7 +179,7 @@ public class StdMapperTest {
   - [Синтаксис](json-syntax.md)
   - [Парсер](json-stream-core/src/test/java/xyz/cofe/json/stream/ast/AstParseTest.java)
   - [Генератор](json-stream-core/src/test/java/xyz/cofe/json/stream/ast/AstWriterTest.java)
-- Итераторы по json stream
+- [Итераторы по json stream](#итераторы-по-json-stream)
   - Бесконечные (+ ленивые) и конечные итераторы json объектов
   - Бесконечные итераторы json
     - Создание итератора
@@ -212,6 +234,100 @@ public class StdMapperTest {
         - Регулярные выражения
 
 -----------------
+
+Итераторы по json stream
+---------------------------
+
+Одна из базовых возможной (java-stream-core) - работать с бесконечными источниками json.
+
+Итераторы - это объекты реализующие `Iterable<Ast>` - т.е. итерирование по json, 
+в данной реализации добавлены дополнительные функции связанные с такими списками объектов.
+
+Итераторы делятся на два класса:
+
+- QuerySet - общий итератор, с типичными методами.
+  - QuerySetInf - итератор по бесконечным спискам, не содержит спец методов, кроме унаследованных.
+  - QuerySetFin - итератор по конечным спискам. Дополняет спец методы, как сортировка, разворот, ...
+
+Итераторы являются "ленивыми" - т.е. они не хранят данные в памяти, а будут извлечены из источника, по мере чтения.
+
+### Создание итератора
+
+```java
+import xyz.cofe.json.stream.query.*;
+import xyz.cofe.json.stream.query.ast.*;
+    
+var qs1 = new QuerySetFin<>(
+    AstParser.parse("""
+        { "a": 1  // Комментарии тоже допускаются
+          // Можно использовать простые идентификаторы,
+          // в качестве ключей (полей объекта), а не только строки
+        , b: [ 1, 2 ]
+        }
+    """)
+);
+
+// либо
+
+var qs2 = QuerySetFin.fromJson(
+    """
+    { a: 1
+    , b: [ 1, 2 ]
+    }
+    """
+);
+```
+
+Выполнение `qs1.toString()` вернет `[{a:1,b:[1,2]}]` - т.к. был передан по сути один объект.
+
+### Объединение итераторов
+
+```java
+var qs1 = QuerySetFin.fromJson( "{ a: 1 } " );
+var qs2 = QuerySetFin.fromJson( "{ b: [ 1, 2 ] }");
+var qs3 = qs1.append( qs2 );
+```
+
+В результате qs3 будет содержать
+
+```json5
+[ {a: 1}, {b: [1,2]} ]
+```
+
+### Фильтрация объектов в json итераторе
+
+```java
+qs = qs.filter( ast -> ast instanceof Ast.Number );
+```
+
+- `filter( predicate )` - Создает новый итератор, который:
+  - Будет применять predicate к json данным
+  - Если predicate вернет false, то в результирующую выборку данное значение не попадет
+  - predicate будет вызван, только когда будет попытка чтения/итерации
+  - predicate - это лямбда вида: `fn( ast: Ast ) : boolean`
+
+### Извлечение значений из Json object
+
+```java
+var qs = QuerySetFin.fromJson(
+    """
+    { a: 1
+    , b: [ 1, 2 ]
+    , b: "x"
+    }
+    """
+);
+
+qs = qs.get("b");
+```
+
+В результате будет:
+
+```json5
+[ [1,2]
+, "x"
+]
+```
 
 Автономные record
 -------------

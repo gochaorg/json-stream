@@ -78,6 +78,7 @@ public class RecMapper {
         record recordToAst(Object record, Class<?> cls) implements ToAstStack {}
         record iterableToAst(Iterable<?> iterable) implements ToAstStack {}
         record arrayToAst(Object array) implements ToAstStack {}
+        record context(Object context) implements ToAstStack {}
     }
 
     //region toAst() primitives
@@ -303,7 +304,19 @@ public class RecMapper {
      * @return узел ast
      */
     public Ast<DummyCharPointer> toAst(Object value) {
-        return toAst(value, ImList.of(new ToAstStack.toAst(value)));
+        return toAst(value, ImList.of());
+    }
+
+    /**
+     * Формирование Ast
+     *
+     * @param value значение
+     * @param context контекст
+     * @return узел ast
+     */
+    public Ast<DummyCharPointer> toAst(Object value, Object context) {
+        if (context == null) throw new IllegalArgumentException("context==null");
+        return toAst(value, ImList.of(new ToAstStack.context(context)));
     }
 
     protected Ast<DummyCharPointer> toAst(Object record, ImList<ToAstStack> stack) {
@@ -377,12 +390,39 @@ public class RecMapper {
      * Кодирование значения в json string
      *
      * @param record значение
+     * @param context контекст
+     * @return json string
+     */
+    public String toJson(Object record, Object context) {
+        if (record == null) throw new IllegalArgumentException("record==null");
+        if (context == null) throw new IllegalArgumentException("context==null");
+        return AstWriter.toString(toAst(record, context));
+    }
+
+    /**
+     * Кодирование значения в json string
+     *
+     * @param record значение
      * @param pretty использовать многострочное форматирование
      * @return json string
      */
     public String toJson(Object record, boolean pretty) {
         if (record == null) throw new IllegalArgumentException("record==null");
         return AstWriter.toString(toAst(record), pretty);
+    }
+
+    /**
+     * Кодирование значения в json string
+     *
+     * @param record значение
+     * @param pretty использовать многострочное форматирование
+     * @param context контекст
+     * @return json string
+     */
+    public String toJson(Object record, boolean pretty, Object context) {
+        if (record == null) throw new IllegalArgumentException("record==null");
+        if (context == null) throw new IllegalArgumentException("context==null");
+        return AstWriter.toString(toAst(record, context), pretty);
     }
 
     /**
@@ -443,7 +483,7 @@ public class RecMapper {
     }
 
     protected Ast<DummyCharPointer> recordToAst(Object record, Class<?> cls, ImList<ToAstStack> stack) {
-        stack = stack.prepend(new ToAstStack.recordToAst(record,cls));
+        stack = stack.prepend(new ToAstStack.recordToAst(record, cls));
 
         var items = ImList.<Ast.KeyValue<DummyCharPointer>>of();
         for (var recCmpt : cls.getRecordComponents()) {
@@ -475,7 +515,7 @@ public class RecMapper {
 
         ImList<Ast<DummyCharPointer>> lst = ImList.of();
         for (var it : iterable) {
-            var a = toAst(it,stack);
+            var a = toAst(it, stack);
             lst = lst.prepend(a);
         }
         return Ast.ArrayAst.create(lst.reverse());
@@ -488,7 +528,7 @@ public class RecMapper {
         var arrLen = Array.getLength(array);
         for (var ai = 0; ai < arrLen; ai++) {
             lst = lst.prepend(
-                toAst(Array.get(array, ai),stack)
+                toAst(Array.get(array, ai), stack)
             );
         }
         return Ast.ArrayAst.create(lst.reverse());

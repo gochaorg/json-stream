@@ -709,7 +709,45 @@ public class StdMapper extends RecMapper {
     protected Map<Class<?>, CustomDeserializer> deserializers = new HashMap<>();
 
     @Override
+    public <T> Result<T, RecMapParseError> tryParse(Ast<?> ast, Class<T> cls) {
+        adHoc(cls);
+        return super.tryParse(ast, cls);
+    }
+
+    @Override
+    public <T> T parse(Ast<?> ast, Type type) {
+        adHoc(type);
+        return super.parse(ast, type);
+    }
+
+    @Override
+    public <T> T parse(String json, Type type) {
+        adHoc(type);
+        return super.parse(json, type);
+    }
+
+    @Override
+    protected <T> T parse(String json, Type type, ImList<ParseStack> stack) {
+        adHoc(type);
+        return super.parse(json, type, stack);
+    }
+
+    @Override
+    public <T> T parse(Ast<?> ast, Class<T> cls) {
+        adHoc(cls);
+        return super.parse(ast, cls);
+    }
+
+    @Override
+    public <T> T parse(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
+        adHoc(cls);
+        return super.parse(ast, cls, stack);
+    }
+
+    @Override
     public <T> Result<T, RecMapParseError> tryParse(Ast<?> ast, Type type, ImList<ParseStack> stack) {
+        adHoc(type);
+
         if (ast != null && type != null) {
             //noinspection SuspiciousMethodCalls
             var dser = deserializers.get(type);
@@ -722,6 +760,8 @@ public class StdMapper extends RecMapper {
 
     @Override
     public <T> Result<T, RecMapParseError> tryParse(Ast<?> ast, Class<T> cls, ImList<ParseStack> stack) {
+        adHoc(cls);
+
         if (ast != null && cls != null) {
             var dser = deserializers.get(cls);
             if (dser != null)//noinspection unchecked
